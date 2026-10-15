@@ -1,0 +1,340 @@
+# AI assistants: configuration is `never`, session history is `review` beyond the dormancy
+# window, caches/logs are `safe`. An assistant whose process runs is left alone (R6).
+schema = 1
+
+# ---------------------------------------------------------------- Claude Code
+
+[[rule]]
+id = "claude-code-keep"
+name = "Claude Code configuration and state"
+category = "assistant-config"
+level = "never"
+[rule.detect]
+kind = "path"
+paths = ["~/.claude.json", "~/.claude/settings.json", "~/.claude/CLAUDE.md", "~/.claude/keybindings.json", "~/.claude/.credentials.json", "~/.claude/agent-memory", "~/.claude/projects/*/memory", "~/.claude/jobs", "~/.claude/daemon", "~/.claude/sessions", "~/.claude/history.jsonl", "~/.claude/rules", "~/.claude/skills", "~/.claude/commands", "~/.claude/agents", "~/.claude/plugins", "~/.claude/themes", "~/.claude/output-styles", "~/.claude/workflows"]
+[rule.cleanup]
+kind = "none"
+[rule.explain]
+why = "Settings, global instructions, credentials, auto memory, personal skills and the files of running sessions. Claude Code's documentation lists the state files to keep."
+regenerate = "Not regenerable."
+cost = "—"
+[rule.source]
+url = "https://code.claude.com/docs/en/claude-directory"
+read_on = 2026-10-15
+quote = "State files to keep: .credentials.json, agent-memory/, jobs/, daemon/"
+
+[[rule]]
+id = "claude-code-transcripts"
+name = "Claude Code session transcripts"
+category = "assistant-history"
+level = "review"
+[rule.detect]
+kind = "pattern"
+glob = ["~/.claude/projects/*/*.jsonl", "~/.claude/projects/*/*/subagents", "~/.claude/projects/*/*/tool-results"]
+group_by = "project"
+[rule.cleanup]
+kind = "trash"
+requires = "user"
+[rule.conditions]
+dormancy_days = 60
+dormancy_measure = "mtime"
+[rule.explain]
+why = "Full conversation transcripts (every message, tool call and result), one JSONL per session, with subagent transcripts and spilled tool outputs. They are what `claude --resume`, `--continue` and rewind use."
+regenerate = "Not regenerable: deleting a transcript means that session can no longer be resumed."
+cost = "losing resume/rewind for that session only; new sessions are unaffected"
+notes = "Claude Code already deletes transcripts older than `cleanupPeriodDays` (default 30 days) when it can; what Cleanator finds older than the window is usually either a paused sweep or Desktop/Cowork sessions, which are kept at any age unless `desktopSessionCleanupPeriodDays` is set. Shown per project with the date range of the sessions. Transcripts are plaintext: the UI never displays their content (R10 bis)."
+[rule.in_use]
+processes = ["claude"]
+open_files = true
+[rule.source]
+url = "https://code.claude.com/docs/en/claude-directory"
+read_on = 2026-10-15
+quote = "Deleting ~/.claude/projects/ means losing resume, continue, and rewind for past sessions, and auto memory for every project."
+
+[[rule]]
+id = "claude-code-caches"
+name = "Claude Code caches and logs"
+category = "assistant-cache"
+level = "safe"
+[rule.detect]
+kind = "path"
+paths = ["~/.claude/file-history", "~/.claude/paste-cache", "~/.claude/image-cache", "~/.claude/uploads", "~/.claude/debug", "~/.claude/session-env", "~/.claude/shell-snapshots", "~/.claude/feedback-bundles", "~/.claude/usage-data", "~/.claude/skills/.trash", "~/.claude/plugins/.trash", "~/.claude/todos", "~/.claude/statsig", "~/.claude/logs", "~/.cache/claude-cli-nodejs"]
+[rule.cleanup]
+kind = "rm"
+requires = "user"
+[rule.conditions]
+dormancy_days = 7
+dormancy_measure = "mtime"
+[rule.explain]
+why = "Pre-edit snapshots for checkpoint restore, large pastes and images attached to sessions, debug logs, shell snapshots, feedback archives, insights cache and legacy directories no longer written."
+regenerate = "Recreated during sessions; checkpoint restore for past sessions is lost."
+cost = "none for new sessions"
+notes = "Entries younger than 7 days are left alone (a running or just-finished session may need them). Claude Code sweeps most of these itself after `cleanupPeriodDays`."
+[rule.in_use]
+processes = ["claude"]
+[rule.source]
+url = "https://code.claude.com/docs/en/claude-directory"
+read_on = 2026-10-15
+quote = "Caches and lock files are safe to delete."
+
+# ------------------------------------------------------------- Claude Desktop
+
+[[rule]]
+id = "claude-desktop-vm"
+name = "Claude Desktop virtual machine (Cowork)"
+category = "assistant-config"
+level = "never"
+[rule.detect]
+kind = "path"
+paths = ["~/.config/Claude/vm_bundles"]
+[rule.cleanup]
+kind = "none"
+[rule.explain]
+why = "Disk images of the sandbox Claude Desktop runs local tasks in (rootfs.img, sessiondata.img, ~20 GB). Rewritten every day the app is used: in use by definition. Shown in the treemap so the user knows where 20 GB went."
+regenerate = "—"
+cost = "—"
+notes = "Observed on the dev machine on 2026-10-15; no public documentation of this layout found yet (source to add or rule to adjust before release)."
+[rule.in_use]
+processes = ["claude-desktop", "Claude"]
+[rule.source]
+url = "to-verify"
+read_on = 2026-10-15
+quote = ""
+
+[[rule]]
+id = "claude-desktop-sessions"
+name = "Claude Desktop local session logs"
+category = "assistant-history"
+level = "review"
+[rule.detect]
+kind = "pattern"
+glob = "~/.config/Claude/local-agent-mode-sessions/**/audit.jsonl"
+group_by = "parent:2"
+[rule.cleanup]
+kind = "trash"
+requires = "user"
+[rule.conditions]
+dormancy_days = 60
+dormancy_measure = "mtime"
+[rule.explain]
+why = "Audit logs of local-agent sessions run from Claude Desktop; a long session leaves a file of about 1 GB."
+regenerate = "Not regenerable; needed only to review what a past session did."
+cost = "none for the app"
+notes = "Observed on the dev machine (two files of 1.0 and 1.2 GB); layout not documented publicly — to verify before release."
+[rule.in_use]
+processes = ["claude-desktop", "Claude"]
+[rule.source]
+url = "to-verify"
+read_on = 2026-10-15
+quote = ""
+
+# -------------------------------------------------------------------- Codex
+
+[[rule]]
+id = "codex-keep"
+name = "Codex configuration and credentials"
+category = "assistant-config"
+level = "never"
+[rule.detect]
+kind = "path"
+paths = ["$CODEX_HOME/config.toml", "~/.codex/config.toml", "$CODEX_HOME/auth.json", "~/.codex/auth.json"]
+[rule.cleanup]
+kind = "none"
+[rule.explain]
+why = "Local configuration and file-based credentials."
+regenerate = "Not regenerable."
+cost = "—"
+[rule.source]
+url = "https://learn.chatgpt.com/docs/config-file/config-advanced.md"
+read_on = 2026-10-15
+quote = "Codex stores its local state under CODEX_HOME (defaults to ~/.codex)."
+
+[[rule]]
+id = "codex-history"
+name = "Codex session history and transcripts"
+category = "assistant-history"
+level = "review"
+[rule.detect]
+kind = "path"
+paths = ["$CODEX_HOME/history.jsonl", "~/.codex/history.jsonl", "$CODEX_HOME/sessions", "~/.codex/sessions", "$CODEX_HOME/log", "~/.codex/log"]
+[rule.cleanup]
+kind = "trash"
+requires = "user"
+[rule.conditions]
+dormancy_days = 60
+dormancy_measure = "mtime"
+[rule.explain]
+why = "Local session transcripts and prompt history Codex saves under CODEX_HOME."
+regenerate = "Not regenerable; `history.max_bytes` and `persistence = \"none\"` in config.toml limit or disable it for the future."
+cost = "losing the ability to review or resume those sessions"
+[rule.in_use]
+processes = ["codex"]
+[rule.source]
+url = "https://learn.chatgpt.com/docs/config-file/config-advanced.md"
+read_on = 2026-10-15
+quote = "saves local session transcripts under CODEX_HOME"
+
+# --------------------------------------------------------- VS Code and forks
+
+[[rule]]
+id = "vscode-family-caches"
+name = "VS Code / Cursor / Windsurf caches and logs"
+category = "assistant-cache"
+level = "safe"
+[rule.detect]
+kind = "pattern"
+glob = ["~/.config/{Code,Cursor,Windsurf,VSCodium,Code - Insiders}/{Cache,CachedData,CachedExtensionVSIXs,CachedProfilesData,Code Cache,GPUCache,DawnCache,DawnGraphiteCache,DawnWebGPUCache,logs,Crashpad,Service Worker/CacheStorage}"]
+group_by = "app"
+[rule.cleanup]
+kind = "rm"
+requires = "user"
+[rule.explain]
+why = "Electron and extension-host caches, GPU shader caches, crash reports and logs of VS Code and its forks (Cursor, Windsurf)."
+regenerate = "Recreated at the next start."
+cost = "a slower first start"
+[rule.in_use]
+processes = ["code", "cursor", "windsurf", "codium"]
+[rule.source]
+url = "https://code.visualstudio.com/docs/setup/uninstall"
+read_on = 2026-10-15
+quote = "you can delete the user data folders Code, .vscode-shared, and .vscode"
+
+[[rule]]
+id = "vscode-family-workspace-storage"
+name = "VS Code / Cursor workspace storage"
+category = "assistant-history"
+level = "review"
+[rule.detect]
+kind = "pattern"
+glob = ["~/.config/{Code,Cursor,Windsurf,VSCodium}/User/workspaceStorage/*", "~/.config/{Code,Cursor,Windsurf,VSCodium}/User/History"]
+group_by = "app"
+[rule.cleanup]
+kind = "trash"
+requires = "user"
+[rule.conditions]
+dormancy_days = 60
+dormancy_measure = "mtime"
+[rule.explain]
+why = "Per-workspace state (open editors, extension data, local file history). Folders for workspaces that no longer exist or were not opened for 60 days are proposed."
+regenerate = "Recreated empty when the workspace is opened again; unsaved local history is lost."
+cost = "losing local history and extension state for that workspace"
+[rule.in_use]
+processes = ["code", "cursor", "windsurf", "codium"]
+[rule.source]
+url = "https://code.visualstudio.com/docs/setup/uninstall"
+read_on = 2026-10-15
+quote = "$HOME/.config/Code"
+
+[[rule]]
+id = "cline-family-tasks"
+name = "Cline / Roo Code / Kilo Code task history"
+category = "assistant-history"
+level = "review"
+[rule.detect]
+kind = "pattern"
+glob = ["~/.config/{Code,Cursor,Windsurf,VSCodium}/User/globalStorage/{saoudrizwan.claude-dev,rooveterinaryinc.roo-cline,kilocode.kilo-code}/tasks/*"]
+group_by = "app"
+[rule.cleanup]
+kind = "trash"
+requires = "user"
+[rule.conditions]
+dormancy_days = 60
+dormancy_measure = "mtime"
+[rule.explain]
+why = "Each agent task keeps its conversation and file checkpoints: a few MB to several GB per task."
+regenerate = "Not regenerable; the task can no longer be reopened."
+cost = "losing that task's history"
+notes = "Extension ids by convention; each extension's documentation to be read before release."
+[rule.in_use]
+processes = ["code", "cursor", "windsurf"]
+[rule.source]
+url = "to-verify"
+read_on = 2026-10-15
+quote = ""
+
+[[rule]]
+id = "vscode-family-config"
+name = "VS Code / Cursor settings and extensions"
+category = "assistant-config"
+level = "never"
+[rule.detect]
+kind = "pattern"
+glob = ["~/.config/{Code,Cursor,Windsurf,VSCodium}/User/settings.json", "~/.config/{Code,Cursor,Windsurf,VSCodium}/User/keybindings.json", "~/.config/{Code,Cursor,Windsurf,VSCodium}/User/snippets", "~/.vscode/extensions", "~/.cursor/extensions", "~/.windsurf/extensions"]
+[rule.cleanup]
+kind = "none"
+[rule.explain]
+why = "User settings, keybindings, snippets and installed extensions: removing them means reinstalling and reconfiguring."
+regenerate = "Not regenerable without redoing the setup."
+cost = "—"
+[rule.source]
+url = "https://code.visualstudio.com/docs/setup/uninstall"
+read_on = 2026-10-15
+quote = "~/.vscode"
+
+# ------------------------------------------------------- other assistants
+
+[[rule]]
+id = "opencode-data"
+name = "OpenCode data and backups"
+category = "assistant-history"
+level = "review"
+[rule.detect]
+kind = "path"
+paths = ["~/.local/share/opencode"]
+item_glob = "*.bak"
+[rule.cleanup]
+kind = "trash"
+requires = "user"
+[rule.explain]
+why = "Backup copies of OpenCode's session database (`opencode.db.bak`), left next to the live database after upgrades."
+regenerate = "Not regenerable, but the live database is untouched."
+cost = "none unless the live database is corrupted"
+notes = "Live `opencode.db` is never proposed. Paths by convention — OpenCode documentation to be read before release."
+[rule.in_use]
+processes = ["opencode"]
+[rule.source]
+url = "to-verify"
+read_on = 2026-10-15
+quote = ""
+
+[[rule]]
+id = "assistant-caches-misc"
+name = "Caches of other assistants and editors (OpenCode, Zed, Continue, Codeium, JetBrains, Gemini CLI)"
+category = "assistant-cache"
+level = "safe"
+[rule.detect]
+kind = "path"
+paths = ["~/.cache/opencode", "~/.cache/@opencodedesktop-updater", "~/.cache/@opencode-aidesktop-updater", "~/.cache/zed", "~/.continue/index", "~/.codeium/.cache", "~/.cache/JetBrains", "~/.gemini/tmp", "~/.cache/electron", "~/.cache/node-gyp"]
+[rule.cleanup]
+kind = "rm"
+requires = "user"
+[rule.explain]
+why = "Index, update downloads and build caches of other assistants and editors."
+regenerate = "Rebuilt or re-downloaded at the next start."
+cost = "a slower first start; JetBrains re-indexes the project"
+notes = "JetBrains documented (note: its cache directory also holds local history, so the JetBrains entry is listed separately and left unticked by default); Gemini CLI ~/.gemini/tmp documented as shell history per project (geminicli.com/docs/cli/configuration, read 2026-10-15); OpenCode, Zed, Continue, Codeium paths by convention, to read before release."
+[rule.in_use]
+processes = ["opencode", "zed", "idea", "pycharm", "rustrover", "gemini"]
+[rule.source]
+url = "https://www.jetbrains.com/help/idea/directories-used-by-the-ide-to-store-settings-caches-plugins-and-logs.html"
+read_on = 2026-10-15
+quote = "~/.cache/JetBrains/<product><version>: caches and local history files; .../log: product logs and thread dumps"
+
+[[rule]]
+id = "assistant-config-misc"
+name = "Configuration and credentials of other assistants"
+category = "assistant-config"
+level = "never"
+[rule.detect]
+kind = "path"
+paths = ["~/.gemini/settings.json", "~/.gemini/oauth_creds.json", "~/.config/opencode", "~/.continue/config.*", "~/.codeium", "~/.aider.conf.yml", "~/.config/goose", "~/.config/amp", "~/.cursor/mcp.json", "**/.cursor/rules", "**/.claude/settings*.json", "**/CLAUDE.md", "**/AGENTS.md", "**/.env", "**/.env.*"]
+[rule.cleanup]
+kind = "none"
+[rule.explain]
+why = "Settings, MCP server definitions, project instructions and secrets. Never proposed, never cited in the script, never displayed in detail (R10 bis)."
+regenerate = "—"
+cost = "—"
+[rule.source]
+url = "https://geminicli.com/docs/cli/configuration/"
+read_on = 2026-10-15
+quote = "The user settings file is at ~/.gemini/settings.json and applies to that user's sessions."

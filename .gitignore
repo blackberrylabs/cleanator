@@ -1,0 +1,7 @@
+/target
+**/*.rs.bk
+*.log
+/dist
+# Author working material: disk inventory of the dev machine and reference screenshots
+# (personal data, see BRIEF R15 / CONVENTIONS "hors git")
+/00_cadrage/

@@ -1,0 +1,220 @@
+# Package manager caches. All regenerable: the manager re-downloads on the next install.
+schema = 1
+
+[[rule]]
+id = "pip-cache"
+name = "pip cache"
+category = "package-cache"
+level = "safe"
+[rule.detect]
+kind = "path"
+paths = ["$PIP_CACHE_DIR", "$XDG_CACHE_HOME/pip", "~/.cache/pip"]
+[rule.cleanup]
+kind = "command"
+command = "pip cache purge"
+fallback = "rm"
+requires = "user"
+[rule.explain]
+why = "pip keeps two caches: HTTP responses (like a browser cache) and locally built wheels, so later installs are faster."
+regenerate = "pip downloads and rebuilds what it needs on the next install."
+cost = "seconds to minutes per install, network"
+[rule.source]
+url = "https://pip.pypa.io/en/stable/topics/caching/"
+read_on = 2026-10-15
+quote = "pip cache purge clears all files from pip's wheel and HTTP caches."
+
+[[rule]]
+id = "uv-cache"
+name = "uv cache"
+category = "package-cache"
+level = "safe"
+[rule.detect]
+kind = "path"
+paths = ["$UV_CACHE_DIR", "$XDG_CACHE_HOME/uv", "~/.cache/uv"]
+[rule.cleanup]
+kind = "command"
+command = "uv cache clean"
+fallback = "none"
+requires = "user"
+[rule.explain]
+why = "uv stores downloaded and built packages here and links them into virtual environments on the same filesystem."
+regenerate = "uv re-downloads or rebuilds on the next sync; the directory and its lock file are kept so other uv processes stay safe."
+cost = "seconds to minutes per project, network"
+notes = "Never remove files inside this cache by hand; uv's documentation says it is never safe. Files are linked into environments: when environments still reference them, cleaning frees less than the displayed size. Prefer `uv cache prune` for a lighter, periodic cleanup."
+[rule.source]
+url = "https://docs.astral.sh/uv/concepts/cache/"
+read_on = 2026-10-15
+quote = "it's never safe to modify the cache directly (e.g., by removing a file or directory)"
+
+[[rule]]
+id = "npm-cache"
+name = "npm cache"
+category = "package-cache"
+level = "safe"
+[rule.detect]
+kind = "path"
+paths = ["$npm_config_cache/_cacache", "~/.npm/_cacache"]
+[rule.cleanup]
+kind = "command"
+command = "npm cache clean --force"
+fallback = "rm"
+requires = "user"
+[rule.explain]
+why = "npm keeps every downloaded package tarball and metadata in an opaque, self-healing content store."
+regenerate = "npm re-fetches packages on the next install."
+cost = "seconds to minutes per project, network"
+[rule.source]
+url = "https://docs.npmjs.com/cli/v10/commands/npm-cache"
+read_on = 2026-10-15
+quote = "clearing the cache is typically unnecessary ... the only good reason to do so is reclaiming disk space"
+
+[[rule]]
+id = "npx-cache"
+name = "npx cache (MCP servers and one-off CLIs)"
+category = "package-cache"
+level = "safe"
+[rule.detect]
+kind = "path"
+paths = ["$npm_config_cache/_npx", "~/.npm/_npx"]
+[rule.cleanup]
+kind = "rm"
+requires = "user"
+[rule.explain]
+why = "Every `npx <package>` (each MCP server an AI assistant starts, every one-off CLI) leaves an installed copy here, one directory per package set."
+regenerate = "npx reinstalls the package the next time it is run."
+cost = "seconds per package, network"
+notes = "npx documents the install into a folder of the npm cache; the _npx folder name is observed (inventory of 2026-10-15: ~/.npm/_npx), not documented."
+[rule.source]
+url = "https://docs.npmjs.com/cli/v10/commands/npx"
+read_on = 2026-10-15
+quote = "they are installed to a folder in the npm cache, which is added to the PATH environment variable in the executed process."
+
+[[rule]]
+id = "pnpm-store"
+name = "pnpm store (unreferenced packages)"
+category = "package-cache"
+level = "safe"
+[rule.detect]
+kind = "probe"
+probe = "pnpm-store-path"
+[rule.cleanup]
+kind = "command"
+command = "pnpm store prune"
+fallback = "none"
+requires = "user"
+[rule.explain]
+why = "pnpm keeps one content-addressable store and links packages from it into every project's node_modules."
+regenerate = "Only packages no project uses are removed; pnpm downloads a package again if a later install needs it."
+cost = "seconds, network, only when switching to older dependencies"
+notes = "Store path comes from `pnpm store path`. Packages are linked into projects, so the store's displayed size is largely shared with node_modules; only unreferenced packages are freed."
+[rule.source]
+url = "https://pnpm.io/cli/store"
+read_on = 2026-10-15
+quote = "running pnpm store prune is not harmful and has no side effects on your projects"
+
+[[rule]]
+id = "cargo-registry"
+name = "Cargo registry cache"
+category = "package-cache"
+level = "safe"
+[rule.detect]
+kind = "path"
+paths = ["$CARGO_HOME/registry", "~/.cargo/registry"]
+[rule.cleanup]
+kind = "rm"
+requires = "user"
+[rule.explain]
+why = "Downloaded .crate archives (registry/cache), their unpacked sources (registry/src) and the registry index."
+regenerate = "Cargo re-downloads, re-extracts or re-fetches what a build needs."
+cost = "seconds to minutes per project, network"
+notes = "Only `registry/` and `git/` are cache. `bin/`, `.crates.toml`, `config.toml` and `credentials.toml` in CARGO_HOME are installed tools, settings and login data: matched by a `never` rule."
+[rule.source]
+url = "https://doc.rust-lang.org/cargo/guide/cargo-home.html"
+read_on = 2026-10-15
+quote = "you can always remove any part of the cache and Cargo will do its best to restore sources if a crate needs them"
+
+[[rule]]
+id = "cargo-git-db"
+name = "Cargo git dependencies cache"
+category = "package-cache"
+level = "safe"
+[rule.detect]
+kind = "path"
+paths = ["$CARGO_HOME/git", "~/.cargo/git"]
+[rule.cleanup]
+kind = "rm"
+requires = "user"
+[rule.explain]
+why = "Bare clones and checkouts of crates that are git dependencies."
+regenerate = "Cargo re-clones the repository when a build needs it."
+cost = "seconds to minutes, network"
+[rule.source]
+url = "https://doc.rust-lang.org/cargo/guide/cargo-home.html"
+read_on = 2026-10-15
+quote = "When a crate depends on a git repository, Cargo clones the repo as a bare repo into this directory"
+
+[[rule]]
+id = "conda-pkgs"
+name = "conda package cache"
+category = "package-cache"
+level = "safe"
+[rule.detect]
+kind = "probe"
+probe = "conda-pkgs-dirs"
+[rule.cleanup]
+kind = "command"
+command = "conda clean --all --yes"
+fallback = "none"
+requires = "user"
+[rule.explain]
+why = "Downloaded tarballs, extracted packages and index cache shared by all conda environments."
+regenerate = "conda re-downloads what an environment needs; `--all` removes only unused packages, tarballs, index cache, temp and log files."
+cost = "minutes per environment, network"
+notes = "Never use `conda clean --force-pkgs-dirs`: conda's documentation says it breaks environments linked back to the package cache. Environments not listed by `conda info --envs` are not checked for links either; Cleanator lists them from `conda env list` before proposing this rule."
+[rule.source]
+url = "https://docs.conda.io/projects/conda/en/latest/commands/clean.html"
+read_on = 2026-10-15
+quote = "--force-pkgs-dirs ... This will break environments with packages installed using symlinks back to the package cache."
+
+[[rule]]
+id = "playwright-browsers"
+name = "Playwright browsers"
+category = "tooling"
+level = "safe"
+[rule.detect]
+kind = "path"
+paths = ["$PLAYWRIGHT_BROWSERS_PATH", "~/.cache/ms-playwright"]
+[rule.cleanup]
+kind = "command"
+command = "npx playwright uninstall --all"
+fallback = "rm"
+requires = "user"
+[rule.explain]
+why = "Chromium, Firefox and WebKit builds downloaded by Playwright (and by MCP servers that drive a browser)."
+regenerate = "`npx playwright install` downloads them again."
+cost = "minutes, several hundred MB of network"
+[rule.in_use]
+processes = ["chrome", "chromium", "firefox", "webkit"]
+[rule.source]
+url = "https://playwright.dev/docs/browsers"
+read_on = 2026-10-15
+quote = "~/.cache/ms-playwright on Linux"
+
+[[rule]]
+id = "cargo-home-config"
+name = "Cargo installed tools and credentials"
+category = "assistant-config"
+level = "never"
+[rule.detect]
+kind = "path"
+paths = ["$CARGO_HOME/bin", "~/.cargo/bin", "$CARGO_HOME/credentials.toml", "~/.cargo/credentials.toml", "$CARGO_HOME/config.toml", "~/.cargo/config.toml"]
+[rule.cleanup]
+kind = "none"
+[rule.explain]
+why = "Installed binaries (`cargo install`), settings and registry login: not cache."
+regenerate = "Not regenerable without reinstalling tools and logging in again."
+cost = "—"
+[rule.source]
+url = "https://doc.rust-lang.org/cargo/guide/cargo-home.html"
+read_on = 2026-10-15
+quote = "bin/ ... .crates.toml ... config.toml ... credentials.toml"

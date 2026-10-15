@@ -1,0 +1,122 @@
+# Things that are big and probably forgotten: backups, archives, disk images, source
+# trees cloned once. Always `review`, always shown with their date, never `safe`.
+schema = 1
+
+[[rule]]
+id = "backup-directories"
+name = "Backup copies of directories"
+category = "backup"
+level = "review"
+[rule.detect]
+kind = "pattern"
+glob = ["~/**/*_backup*", "~/**/*_BACKUP_*", "~/**/*.bak", "~/**/*-backup-*", "~/**/*_sauvegarde*", "~/.config/*_backup*"]
+min_size = "100MB"
+exclude_under = ["node_modules/", ".git/", "docker/volumes"]
+[rule.cleanup]
+kind = "trash"
+requires = "user"
+[rule.explain]
+why = "A directory or file whose name says it is a backup. If the original still exists next to it and is newer, the backup is a snapshot of the past."
+regenerate = "Not regenerable: it is the copy. The original, if still present, is untouched."
+cost = "losing the ability to go back to that date"
+notes = "Shown with its date and, when found, the original it copies (same name without the backup suffix) and whether the original is newer. Matching by name only: Cleanator never looks inside."
+[rule.source]
+url = "project brief, inventory of 2026-10-15"
+read_on = 2026-10-15
+quote = "~/.config/Claude_backup 23 GB (copy of 2026-09-29), claude_config_backup_20260703.tar.gz 1.7 GB, opencode.db.bak 2.7 GB"
+
+[[rule]]
+id = "archives-at-home-root"
+name = "Archives and disk images"
+category = "large-file"
+level = "review"
+[rule.detect]
+kind = "signature"
+extensions = ["tar.gz", "tgz", "tar.xz", "tar.zst", "zip", "7z", "iso", "img", "img.xz", "img.gz", "qcow2", "vdi", "vmdk", "ova", "deb", "rpm", "AppImage"]
+min_size = "500MB"
+exclude_managed = true
+exclude_under = ["/var/cache/apt", ".cache/", "node_modules/", ".git/"]
+[rule.cleanup]
+kind = "trash"
+requires = "user"
+[rule.explain]
+why = "Downloaded installers, ISO images, flasher images and archives sit where they were downloaded and are rarely needed twice."
+regenerate = "Downloads can be fetched again; an archive you made yourself cannot."
+cost = "from a download to irreplaceable"
+notes = "Shown with date and parent folder. Images of running virtual machines are excluded by the open-files check."
+[rule.in_use]
+open_files = true
+[rule.source]
+url = "project brief, inventory of 2026-10-15"
+read_on = 2026-10-15
+quote = "hive-flasher-20221024.img 13.2 GB (2023), ubuntu-26.04-live-server-amd64.iso 2.7 GB"
+
+[[rule]]
+id = "vm-images"
+name = "Virtual machine images and boxes"
+category = "large-file"
+level = "review"
+[rule.detect]
+kind = "path"
+paths = ["~/.local/share/libvirt/images", "~/VirtualBox VMs", "~/.vagrant.d/boxes", "~/.local/share/gnome-boxes/images", "~/snap/multipass"]
+item_glob = "*"
+[rule.cleanup]
+kind = "trash"
+requires = "user"
+[rule.explain]
+why = "Disk images of virtual machines and downloaded Vagrant boxes, GBs each."
+regenerate = "A box is re-downloaded; a VM's disk is not."
+cost = "losing the VM's state"
+notes = "Paths by convention; each tool's documentation to be read before release. VMs that are running are excluded by the open-files check."
+[rule.in_use]
+processes = ["qemu", "VBoxHeadless", "VirtualBoxVM", "multipassd"]
+open_files = true
+[rule.source]
+url = "to-verify"
+read_on = 2026-10-15
+quote = ""
+
+[[rule]]
+id = "git-reclonable"
+name = "Git repositories you could clone again"
+category = "git-reclonable"
+level = "review"
+[rule.detect]
+kind = "probe"
+probe = "git-status"
+roots = ["~"]
+exclude_under = ["Bureau/Projets", "Bureau/Logiciels", "node_modules/", ".cargo/git"]
+min_size = "200MB"
+[rule.cleanup]
+kind = "trash"
+requires = "user"
+[rule.explain]
+why = "A repository cloned from a remote, with a clean working tree and nothing unpushed, is fully recoverable with one `git clone`. Big ones are usually upstream projects cloned once to build or read."
+regenerate = "`git clone {remote}`."
+cost = "a clone: seconds to minutes, network"
+notes = "Conditions checked by the probe: `.git` present, `origin` is a remote URL (not a local path), `git status --porcelain` empty, no commit ahead of upstream, no stash. Any doubt → not proposed. The user's own project folders are excluded by default (setting)."
+[rule.source]
+url = "project brief, inventory of 2026-10-15"
+read_on = 2026-10-15
+quote = "claude-desktop-debian 6.1 GB, openclaw-src 1.2 GB, llama.cpp 598 MB, all cloned at the home root"
+
+[[rule]]
+id = "large-files-unclassified"
+name = "Other files over 1 GB"
+category = "large-file"
+level = "never"
+[rule.detect]
+kind = "signature"
+extensions = ["*"]
+min_size = "1GB"
+exclude_managed = true
+[rule.cleanup]
+kind = "none"
+[rule.explain]
+why = "Big files no rule recognises (datasets, databases, exports, videos). Listed in the treemap and in a 'large files' view so nothing stays invisible, never in the script."
+regenerate = "—"
+cost = "—"
+[rule.source]
+url = "project brief, R2"
+read_on = 2026-10-15
+quote = "Ce que l'outil ne connait pas est never et n'est jamais propose."

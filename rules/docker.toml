@@ -1,0 +1,142 @@
+# Docker. Everything here goes through Docker's own commands and sizes come from
+# `docker system df -v`: never `rm` inside /var/lib/docker, never the virtual size.
+schema = 1
+
+[[rule]]
+id = "docker-build-cache"
+name = "Docker build cache"
+category = "docker"
+level = "safe"
+[rule.detect]
+kind = "probe"
+probe = "docker"
+item = "build-cache"
+[rule.cleanup]
+kind = "command"
+command = "docker buildx prune --force"
+fallback = "none"
+requires = "docker-group-or-sudo"
+[rule.explain]
+why = "Intermediate layers kept by BuildKit to speed up rebuilds."
+regenerate = "The next `docker build` recreates the layers it needs."
+cost = "minutes per image rebuild"
+[rule.source]
+url = "https://docs.docker.com/engine/manage-resources/pruning/"
+read_on = 2026-10-15
+quote = "removes all dangling build cache"
+
+[[rule]]
+id = "docker-dangling-images"
+name = "Dangling images (<none>)"
+category = "docker"
+level = "safe"
+[rule.detect]
+kind = "probe"
+probe = "docker"
+item = "dangling-images"
+[rule.cleanup]
+kind = "command"
+command = "docker image prune --force"
+fallback = "none"
+requires = "docker-group-or-sudo"
+[rule.explain]
+why = "Image layers that are no longer tagged and that no container references: leftovers of rebuilds."
+regenerate = "Nothing to regenerate; a rebuild produces a new image."
+cost = "none"
+[rule.source]
+url = "https://docs.docker.com/engine/manage-resources/pruning/"
+read_on = 2026-10-15
+quote = "A dangling image is one that isn't tagged, and isn't referenced by any container."
+
+[[rule]]
+id = "docker-unused-images"
+name = "Images with no container"
+category = "docker"
+level = "review"
+[rule.detect]
+kind = "probe"
+probe = "docker"
+item = "unused-tagged-images"
+[rule.cleanup]
+kind = "command"
+command = "docker image rm {repository}:{tag}"
+fallback = "none"
+requires = "docker-group-or-sudo"
+[rule.explain]
+why = "Tagged images that no container (running or stopped) uses. Often old versions, finished experiments, or images of a stack you stopped using."
+regenerate = "`docker pull` or a rebuild brings the image back."
+cost = "minutes to tens of minutes, GBs of network for large images"
+notes = "Size shown is the image's UNIQUE SIZE (layers shared with other images are not freed). An image used only by a container in state `Created` (never started) is listed here, with that container named. One command per image, never `docker image prune -a`, so the user keeps what they tick."
+[rule.in_use]
+probe = "docker-containers"
+[rule.source]
+url = "https://docs.docker.com/reference/cli/docker/system/df/"
+read_on = 2026-10-15
+quote = "UNIQUE SIZE is the amount of space that's only used by a given image."
+
+[[rule]]
+id = "docker-stopped-containers"
+name = "Stopped containers"
+category = "docker"
+level = "review"
+[rule.detect]
+kind = "probe"
+probe = "docker"
+item = "stopped-containers"
+[rule.cleanup]
+kind = "command"
+command = "docker container rm {name}"
+fallback = "none"
+requires = "docker-group-or-sudo"
+[rule.explain]
+why = "A stopped container keeps its writable layer on disk; it may hold data written inside the container (logs, downloads) that is not in a volume."
+regenerate = "`docker run` or `docker compose up` recreates the container; data in its writable layer is lost."
+cost = "seconds; data in the writable layer is not recoverable"
+notes = "Listed one by one with their image and exit date, never `docker container prune`."
+[rule.source]
+url = "https://docs.docker.com/engine/manage-resources/pruning/"
+read_on = 2026-10-15
+quote = "A stopped container's writable layers still take up disk space."
+
+[[rule]]
+id = "docker-unused-volumes"
+name = "Volumes with no container"
+category = "docker"
+level = "review"
+[rule.detect]
+kind = "probe"
+probe = "docker"
+item = "unused-volumes"
+[rule.cleanup]
+kind = "command"
+command = "docker volume rm {name}"
+fallback = "none"
+requires = "docker-group-or-sudo"
+[rule.explain]
+why = "Volumes are where containers keep persistent data (databases, models of a containerised Ollama, n8n workflows). A volume no container uses may still be the only copy of that data."
+regenerate = "Not regenerable: volume data is user data."
+cost = "irrecoverable if the data mattered"
+notes = "Named volumes are shown with their name and size and flagged 'may contain data'. Anonymous volumes (hash names) are shown separately. Docker itself never removes volumes automatically for this reason."
+[rule.source]
+url = "https://docs.docker.com/engine/manage-resources/pruning/"
+read_on = 2026-10-15
+quote = "Volumes are never removed automatically, because to do so could destroy data."
+
+[[rule]]
+id = "docker-data-root"
+name = "Docker data root"
+category = "docker"
+level = "never"
+[rule.detect]
+kind = "path"
+paths = ["/var/lib/docker", "~/.local/share/docker"]
+[rule.cleanup]
+kind = "none"
+[rule.explain]
+why = "Docker's own storage (overlay2 layers, image metadata, volumes). Only Docker commands may touch it; it is shown in the treemap as one block sized by `docker system df`."
+regenerate = "—"
+cost = "—"
+[rule.source]
+url = "https://docs.docker.com/reference/cli/docker/system/df/"
+read_on = 2026-10-15
+quote = "displays information regarding the amount of disk space used by the Docker daemon"

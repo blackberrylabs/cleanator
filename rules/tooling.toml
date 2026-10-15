@@ -1,0 +1,71 @@
+# Runtimes and toolchains installed several times over, and GPU toolchains that must be
+# left alone.
+schema = 1
+
+[[rule]]
+id = "nvm-inactive-node-versions"
+name = "Node versions (nvm) other than the active one"
+category = "tooling"
+level = "review"
+[rule.detect]
+kind = "probe"
+probe = "nvm-ls"
+paths = ["$NVM_DIR/versions/node", "~/.nvm/versions/node"]
+[rule.cleanup]
+kind = "command"
+command = "nvm uninstall {version}"
+fallback = "none"
+requires = "user"
+[rule.explain]
+why = "Each Node version installed with nvm carries its own global packages (often one copy of `claude`, `codex`, `gemini` per version). Only the active/default version is in use."
+regenerate = "`nvm install {version}` and reinstall its global packages."
+cost = "a minute, network"
+notes = "The default alias and the currently active version are never proposed. Global packages per version are listed so the user sees what they would lose."
+[rule.source]
+url = "https://github.com/nvm-sh/nvm/blob/master/README.md"
+read_on = 2026-10-15
+quote = "~/.nvm/versions/node/vX.X.X/lib/node_modules/*"
+
+[[rule]]
+id = "cuda-toolkits"
+name = "CUDA toolkits"
+category = "tooling"
+level = "never"
+[rule.detect]
+kind = "path"
+paths = ["/usr/local/cuda-*", "/usr/local/cuda", "/opt/cuda*"]
+[rule.cleanup]
+kind = "none"
+[rule.explain]
+why = "Several CUDA versions often coexist (one per framework). Which one a given venv needs is not something a cleaner can decide; shown with their size so the user knows."
+regenerate = "—"
+cost = "—"
+[rule.source]
+url = "project brief §8"
+read_on = 2026-10-15
+quote = "toute action sur les toolchains CUDA ... hors perimetre"
+
+[[rule]]
+id = "local-llm-apps"
+name = "Models of local LLM apps (Jan, GPT4All, Msty, Open WebUI)"
+category = "model"
+level = "review"
+[rule.detect]
+kind = "path"
+paths = ["~/jan/models", "~/.local/share/nomic.ai/GPT4All", "~/.config/Msty/models", "~/.ollama-webui"]
+item_glob = "*"
+[rule.cleanup]
+kind = "trash"
+requires = "user"
+[rule.explain]
+why = "Models downloaded inside desktop chat apps, each in its own folder."
+regenerate = "Downloaded again from the app."
+cost = "minutes to an hour, GBs of network"
+notes = "Paths by convention; each app's documentation to be read before release. Open WebUI in Docker keeps models in the `ollama` volume (docker rules)."
+[rule.in_use]
+processes = ["jan", "gpt4all", "msty"]
+open_files = true
+[rule.source]
+url = "to-verify"
+read_on = 2026-10-15
+quote = ""

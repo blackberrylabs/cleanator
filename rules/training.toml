@@ -1,0 +1,33 @@
+# Training and generation outputs inside projects. Never `safe`: they may be the only copy
+# of a fine-tune or of hours of GPU time.
+schema = 1
+
+[[rule]]
+id = "training-outputs"
+name = "Training outputs (checkpoints, runs, wandb, outputs, lightning_logs)"
+category = "training-output"
+level = "review"
+[rule.detect]
+kind = "pattern"
+glob = ["**/checkpoints", "**/checkpoint-*", "**/runs", "**/wandb", "**/outputs", "**/lightning_logs", "**/mlruns", "**/tensorboard", "**/samples"]
+anchor = "project"
+min_size = "200MB"
+exclude_under = ["node_modules/", ".venv/", "site-packages/", "docker/volumes"]
+[rule.cleanup]
+kind = "trash"
+requires = "user"
+[rule.conditions]
+dormancy_days = 60
+dormancy_measure = "mtime"
+[rule.explain]
+why = "Intermediate checkpoints, experiment logs and generated samples written by training scripts (PyTorch Lightning, Hugging Face Trainer, Weights & Biases, MLflow, ai-toolkit, ComfyUI outputs). Intermediate checkpoints are often kept by mistake; the final weights may be the only copy."
+regenerate = "Only by running the training again: hours of GPU."
+cost = "hours of GPU, or irreplaceable"
+notes = "Flagged 'may be your only copy' in the UI; the most recent checkpoint of a run is highlighted so the user keeps it. Grouped by run directory."
+[rule.in_use]
+processes = ["python", "accelerate", "torchrun", "comfy"]
+open_files = true
+[rule.source]
+url = "project brief, R7"
+read_on = 2026-10-15
+quote = "Les sorties d'entrainement ... sont review avec l'avertissement « peut etre votre seule copie », jamais safe."

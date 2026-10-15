@@ -1,0 +1,132 @@
+# Python environments and installed tools. Always `review`: an environment is disposable by
+# design (Python docs), but recreating one with torch + CUDA takes minutes and GBs.
+schema = 1
+
+[[rule]]
+id = "python-venv"
+name = "Python virtual environment"
+category = "python-env"
+level = "review"
+[rule.detect]
+kind = "pattern"
+marker = "pyvenv.cfg"
+anchor = "project"
+exclude_under = ["docker/volumes", ".cache/uv/archive-v0", ".local/share/uv/tools", ".local/pipx", ".local/share/pipx"]
+[rule.cleanup]
+kind = "rm"
+requires = "user"
+[rule.conditions]
+dormancy_days = 60
+dormancy_measure = "atime:bin/python"
+[rule.explain]
+why = "A virtual environment (any directory holding pyvenv.cfg, wherever it lives: ~/venvs/, ~/venv-*, a project's .venv) is a disposable copy of the packages a project needs. A torch + CUDA environment weighs 5 to 11 GB."
+regenerate = "`python -m venv` / `uv sync` / `pip install -r requirements.txt` rebuilds it from the project's dependency file."
+cost = "minutes, GBs of network for torch/CUDA wheels (less if the package caches are kept)"
+notes = "Shown with its project when anchored to one, otherwise with its own path; last use = access time of bin/python. Never proposed when bind-mounted into a running container (R6). Deleting a venv whose project has no dependency file means retyping the package list: the UI shows whether requirements.txt / pyproject.toml / uv.lock exists next to it."
+[rule.in_use]
+processes = ["python", "python3", "uvicorn", "gunicorn", "jupyter", "vllm", "sglang"]
+open_files = true
+[rule.source]
+url = "https://docs.python.org/3/library/venv.html"
+read_on = 2026-10-15
+quote = "Considered as disposable – it should be simple to delete and recreate it from scratch."
+
+[[rule]]
+id = "conda-env"
+name = "conda environment"
+category = "python-env"
+level = "review"
+[rule.detect]
+kind = "probe"
+probe = "conda-env-list"
+[rule.cleanup]
+kind = "command"
+command = "conda env remove --name {name} --yes"
+fallback = "none"
+requires = "user"
+[rule.conditions]
+dormancy_days = 60
+dormancy_measure = "atime:bin/python"
+[rule.explain]
+why = "Environments listed by `conda env list`; the base environment is never proposed."
+regenerate = "`conda env create -f environment.yml` or `conda create -n` again."
+cost = "minutes, network"
+[rule.in_use]
+processes = ["python", "python3"]
+open_files = true
+[rule.source]
+url = "https://docs.conda.io/projects/conda/en/latest/commands/clean.html"
+read_on = 2026-10-15
+quote = "Environments not listed by conda info --envs are not checked"
+
+[[rule]]
+id = "uv-tools"
+name = "uv installed tools"
+category = "python-env"
+level = "review"
+[rule.detect]
+kind = "path"
+paths = ["$UV_TOOL_DIR", "$XDG_DATA_HOME/uv/tools", "~/.local/share/uv/tools"]
+item_glob = "*"
+[rule.cleanup]
+kind = "command"
+command = "uv tool uninstall {name}"
+fallback = "none"
+requires = "user"
+[rule.conditions]
+dormancy_days = 60
+dormancy_measure = "atime:bin/python"
+[rule.explain]
+why = "Command-line tools installed with `uv tool install` (and the ones `uvx` keeps), each in its own environment."
+regenerate = "`uv tool install {name}` again."
+cost = "seconds to a minute, network"
+[rule.source]
+url = "https://docs.astral.sh/uv/concepts/cache/"
+read_on = 2026-10-15
+quote = "uv cache prune ... removes all centralized project environments"
+
+[[rule]]
+id = "pipx-venvs"
+name = "pipx installed tools"
+category = "python-env"
+level = "review"
+[rule.detect]
+kind = "path"
+paths = ["$PIPX_HOME/venvs", "~/.local/pipx/venvs", "~/.local/share/pipx/venvs"]
+item_glob = "*"
+[rule.cleanup]
+kind = "command"
+command = "pipx uninstall {name}"
+fallback = "none"
+requires = "user"
+[rule.conditions]
+dormancy_days = 60
+dormancy_measure = "atime:bin/python"
+[rule.explain]
+why = "Command-line tools installed with pipx, each in its own environment."
+regenerate = "`pipx install {name}` again."
+cost = "seconds to a minute, network"
+notes = "Both layouts are tried: the newer ~/.local/share/pipx and the older ~/.local/pipx, which pipx keeps using when it exists."
+[rule.source]
+url = "https://pipx.pypa.io/stable/installation/"
+read_on = 2026-10-15
+quote = "pipx's default virtual environment location is typically ~/.local/share/pipx on Linux/Unix ... if ~/.local/pipx exists, it will be used as the default location instead."
+
+[[rule]]
+id = "system-python"
+name = "System Python packages"
+category = "python-env"
+level = "never"
+[rule.detect]
+kind = "path"
+paths = ["/usr/lib/python3*", "/usr/local/lib/python3*", "~/.local/lib/python3*"]
+[rule.cleanup]
+kind = "none"
+[rule.explain]
+why = "Packages of the distribution's Python and of `pip install --user`: removing them breaks system tools. Managed by apt and pip, not by a cleaner."
+regenerate = "—"
+cost = "—"
+[rule.source]
+url = "https://docs.python.org/3/library/venv.html"
+read_on = 2026-10-15
+quote = "It is sufficient to check sys.prefix != sys.base_prefix to determine if the current interpreter is running from a virtual environment."

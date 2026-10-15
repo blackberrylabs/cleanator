@@ -1,0 +1,197 @@
+# AI models: LLMs, image and audio models, wherever they live. Always `review`: a model is
+# re-downloadable but it costs a long download, and loose model files may be the only copy
+# of a fine-tune.
+schema = 1
+
+[[rule]]
+id = "ollama-models"
+name = "Ollama models"
+category = "model"
+level = "review"
+[rule.detect]
+kind = "probe"
+probe = "ollama"
+paths = ["$OLLAMA_MODELS", "~/.ollama/models", "/usr/share/ollama/.ollama/models"]
+[rule.cleanup]
+kind = "command"
+command = "ollama rm {name}"
+fallback = "none"
+requires = "user"
+[rule.explain]
+why = "Models pulled with `ollama pull`/`ollama run`, stored as shared blobs under manifests. Listed by name (`ollama ls`) with their size and modification date, never by blob hash."
+regenerate = "`ollama pull {name}` downloads the model again."
+cost = "minutes to an hour, GBs of network"
+notes = "Blobs are shared between model tags and indexed by manifests: deleting a blob by hand corrupts other models, hence `ollama rm` only. When Ollama runs in Docker, its models are in the `ollama` volume and the same probe reads `docker exec ollama ollama ls`. With the Linux installer the store belongs to the `ollama` user under /usr/share/ollama."
+[rule.in_use]
+processes = ["ollama"]
+probe = "ollama-ps"
+[rule.source]
+url = "https://docs.ollama.com/faq"
+read_on = 2026-10-15
+quote = "If a different directory needs to be used, set the environment variable OLLAMA_MODELS to the chosen directory."
+
+[[rule]]
+id = "hf-hub-models"
+name = "Hugging Face Hub cache (models)"
+category = "model"
+level = "review"
+[rule.detect]
+kind = "probe"
+probe = "hf-cache"
+paths = ["$HF_HUB_CACHE", "$HF_HOME/hub", "~/.cache/huggingface/hub"]
+item_glob = "models--*"
+[rule.cleanup]
+kind = "command"
+command = "hf cache rm model/{org}/{name} --yes"
+fallback = "trash"
+requires = "user"
+[rule.explain]
+why = "Every model downloaded by transformers, diffusers, vLLM, sentence-transformers or `hf download` lands here, one `models--org--name` directory with blobs, refs and snapshots (symlinks to blobs)."
+regenerate = "The next `from_pretrained` or `hf download` fetches it again."
+cost = "minutes to an hour, GBs of network"
+notes = "Size per model = its blobs (symlinks in snapshots count for nothing). Blobs can be shared between revisions and repos: use `hf cache rm` / `hf cache prune` from an up-to-date huggingface_hub, since older deletion tools may delete a shared file still used by other repos. Last-use date = newest access time among the model's blobs."
+[rule.in_use]
+open_files = true
+processes = ["vllm", "sglang", "text-generation", "comfy", "python"]
+[rule.source]
+url = "https://huggingface.co/docs/huggingface_hub/guides/manage-cache"
+read_on = 2026-10-15
+quote = "The default <CACHE_DIR> is ~/.cache/huggingface/hub."
+
+[[rule]]
+id = "hf-hub-datasets"
+name = "Hugging Face Hub cache (datasets)"
+category = "dataset"
+level = "review"
+[rule.detect]
+kind = "probe"
+probe = "hf-cache"
+paths = ["$HF_HUB_CACHE", "$HF_HOME/hub", "~/.cache/huggingface/hub"]
+item_glob = "datasets--*"
+[rule.cleanup]
+kind = "command"
+command = "hf cache rm dataset/{org}/{name} --yes"
+fallback = "trash"
+requires = "user"
+[rule.explain]
+why = "Datasets downloaded through the Hub, same layout as models."
+regenerate = "Re-downloaded on next use."
+cost = "minutes to hours, GBs of network"
+[rule.source]
+url = "https://huggingface.co/docs/huggingface_hub/guides/manage-cache"
+read_on = 2026-10-15
+quote = "Models, datasets, Spaces, and kernels share one root."
+
+[[rule]]
+id = "hf-legacy-cache"
+name = "Hugging Face cache, old layout"
+category = "model"
+level = "review"
+[rule.detect]
+kind = "pattern"
+glob = "~/.cache/huggingface/models--*"
+[rule.cleanup]
+kind = "trash"
+requires = "user"
+[rule.explain]
+why = "`models--*` directories directly under ~/.cache/huggingface (not under hub/) come from an older library version or a tool that wrote there; today's cache lives in hub/. Often a duplicate of the same model in hub/."
+regenerate = "Re-downloaded on next use if any tool still points there."
+cost = "minutes to an hour, network"
+notes = "Shown with the matching hub/ model if one exists, so the duplicate is obvious."
+[rule.source]
+url = "https://huggingface.co/docs/huggingface_hub/guides/manage-cache"
+read_on = 2026-10-15
+quote = "The default <CACHE_DIR> is ~/.cache/huggingface/hub."
+
+[[rule]]
+id = "hf-xet-cache"
+name = "Hugging Face Xet cache"
+category = "model"
+level = "safe"
+[rule.detect]
+kind = "path"
+paths = ["$HF_XET_CACHE", "$HF_HOME/xet", "~/.cache/huggingface/xet"]
+[rule.cleanup]
+kind = "rm"
+requires = "user"
+[rule.explain]
+why = "Chunk cache used by the Xet transfer protocol while downloading; not the models themselves."
+regenerate = "Refilled during the next download."
+cost = "none"
+[rule.source]
+url = "https://huggingface.co/docs/huggingface_hub/guides/manage-cache"
+read_on = 2026-10-15
+quote = "simply remove the xet cache entirely by running rm -rf ~/<cache_dir>/xet"
+
+[[rule]]
+id = "lm-studio-models"
+name = "LM Studio models"
+category = "model"
+level = "review"
+[rule.detect]
+kind = "path"
+paths = ["~/.lmstudio/models", "~/.cache/lm-studio/models"]
+[rule.cleanup]
+kind = "trash"
+requires = "user"
+[rule.explain]
+why = "GGUF models downloaded inside LM Studio, one directory per publisher/model."
+regenerate = "Downloaded again from LM Studio's model browser."
+cost = "minutes to an hour, GBs of network"
+notes = "Models listed by the `lms ls` probe when the CLI is installed; the directory is whatever the app sets (default paths above are conventions). No remove command is documented, hence trash."
+[rule.in_use]
+processes = ["lm-studio", "LM Studio", "lms"]
+open_files = true
+[rule.source]
+url = "https://lmstudio.ai/docs/cli"
+read_on = 2026-10-15
+quote = "lms ls: lists the models available on disk ... will reflect the current LM Studio models directory, which you set in the My Models tab in the app."
+
+[[rule]]
+id = "loose-model-files"
+name = "Model files outside any store"
+category = "model"
+level = "review"
+[rule.detect]
+kind = "signature"
+extensions = ["safetensors", "gguf", "ckpt", "pt", "pth", "onnx"]
+min_size = "100MB"
+exclude_managed = true
+[rule.cleanup]
+kind = "trash"
+requires = "user"
+[rule.explain]
+why = "Model weights that live in a project folder, a tool's models/ directory (ComfyUI, ai-toolkit, Stable Diffusion) or a hand-made models/ folder. Cleanator cannot know whether they were downloaded or trained: it shows them by name, size and last access, grouped by their parent directory."
+regenerate = "Downloaded files can be fetched again; a fine-tune or a merge you made yourself cannot."
+cost = "from minutes of network to irreplaceable"
+notes = "Grouped by parent directory (one tile per models/ folder). When two files share name and size in different places, both are flagged 'possible duplicate' (full duplicate detection is a v2 feature)."
+[rule.in_use]
+open_files = true
+[rule.source]
+url = "https://huggingface.co/docs/safetensors/index"
+read_on = 2026-10-15
+quote = "safetensors — the standard weights format; extension list from the project brief, inventory of 2026-10-15 (302 .safetensors files, 131 GB)"
+
+[[rule]]
+id = "large-bin-files"
+name = "Large .bin files"
+category = "model"
+level = "review"
+[rule.detect]
+kind = "signature"
+extensions = ["bin"]
+min_size = "500MB"
+exclude_managed = true
+[rule.cleanup]
+kind = "trash"
+requires = "user"
+[rule.explain]
+why = "`.bin` is ambiguous (old PyTorch weights, firmware, disk images); only large ones are worth showing, and always for review."
+regenerate = "Depends on what it is."
+cost = "unknown"
+[rule.in_use]
+open_files = true
+[rule.source]
+url = "project brief, inventory of 2026-10-15"
+read_on = 2026-10-15
+quote = "375 .bin files, 2.7 GB — most of them small"

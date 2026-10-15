@@ -1,0 +1,291 @@
+# System-level caches and leftovers. Most need sudo: they go in the second block of the
+# generated script (R12). Sizes for root-only paths come from the tool when it reports them.
+schema = 1
+
+[[rule]]
+id = "trash"
+name = "Trash"
+category = "system"
+level = "safe"
+[rule.detect]
+kind = "path"
+paths = ["$XDG_DATA_HOME/Trash", "~/.local/share/Trash"]
+[rule.cleanup]
+kind = "command"
+command = "gio trash --empty"
+fallback = "rm"
+requires = "user"
+[rule.explain]
+why = "Files already deleted from the file manager, kept until the trash is emptied."
+regenerate = "Not regenerable: the files are gone for good once emptied. They were already deleted by the user, which is why the rule is `safe`."
+cost = "none"
+notes = "Shown with the biggest items inside so the user can rescue one before emptying. Items Cleanator's own `review` script moved there are listed too."
+[rule.source]
+url = "https://manpages.ubuntu.com/manpages/noble/en/man1/gio.1.html"
+read_on = 2026-10-15
+quote = "trash: Sends files or directories to the 'Trashcan' or restore them from 'Trashcan'. --empty: Empty the trash."
+
+[[rule]]
+id = "apt-archives"
+name = "apt package archives"
+category = "system"
+level = "safe"
+[rule.detect]
+kind = "path"
+paths = ["/var/cache/apt/archives"]
+[rule.cleanup]
+kind = "command"
+command = "sudo apt-get clean"
+fallback = "none"
+requires = "sudo"
+[rule.explain]
+why = "Downloaded .deb files kept after installation."
+regenerate = "apt downloads a package again if it must be reinstalled."
+cost = "none"
+[rule.source]
+url = "https://manpages.ubuntu.com/manpages/noble/en/man8/apt-get.8.html"
+read_on = 2026-10-15
+quote = "clean clears out the local repository of retrieved package files. It removes everything but the lock file from /var/cache/apt/archives/ and /var/cache/apt/archives/partial/."
+
+[[rule]]
+id = "apt-autoremove"
+name = "Packages no longer needed (apt autoremove)"
+category = "system"
+level = "review"
+[rule.detect]
+kind = "probe"
+probe = "apt-autoremove-dry-run"
+[rule.cleanup]
+kind = "command"
+command = "sudo apt-get autoremove"
+fallback = "none"
+requires = "sudo"
+[rule.explain]
+why = "Packages installed automatically as dependencies that nothing depends on any more — including old kernels, several hundred MB each."
+regenerate = "`apt install` brings a package back."
+cost = "seconds, network"
+notes = "The list comes from `apt-get autoremove --dry-run` and is shown in full before the user ticks it: autoremove can list a package the user installed by hand as a dependency."
+[rule.source]
+url = "https://manpages.ubuntu.com/manpages/noble/en/man8/apt-get.8.html"
+read_on = 2026-10-15
+quote = "autoremove is used to remove packages that were automatically installed to satisfy dependencies for other packages and are now no longer needed."
+
+[[rule]]
+id = "journald"
+name = "systemd journal (archived logs)"
+category = "system"
+level = "safe"
+[rule.detect]
+kind = "probe"
+probe = "journalctl-disk-usage"
+paths = ["/var/log/journal"]
+[rule.cleanup]
+kind = "command"
+command = "sudo journalctl --vacuum-size=200M"
+fallback = "none"
+requires = "sudo"
+[rule.explain]
+why = "Archived system logs. Vacuuming keeps the active journal and removes the oldest archived files until the total is under the size given."
+regenerate = "Not regenerable, but only old archived logs are removed; the active journal is untouched."
+cost = "none for the system"
+notes = "Reclaimable = total reported by `journalctl --disk-usage` minus 200 MB. The threshold is a setting."
+[rule.source]
+url = "https://manpages.ubuntu.com/manpages/noble/en/man1/journalctl.1.html"
+read_on = 2026-10-15
+quote = "removes the oldest archived journal files until the disk space they use falls below the specified size"
+
+[[rule]]
+id = "snap-disabled-revisions"
+name = "snap: disabled old revisions"
+category = "system"
+level = "safe"
+[rule.detect]
+kind = "probe"
+probe = "snap-list-all"
+paths = ["/var/lib/snapd/snaps"]
+[rule.cleanup]
+kind = "command"
+command = "sudo snap remove {name} --revision={revision}"
+fallback = "none"
+requires = "sudo"
+[rule.explain]
+why = "After a refresh, snap keeps the previous revision of each snap (two on classic Ubuntu) so it can revert. Each disabled revision is a full copy of the application."
+regenerate = "The current revision is untouched; the disabled one is only needed to revert."
+cost = "losing `snap revert` for that snap until the next refresh"
+notes = "One command per disabled revision (Notes column `disabled` in `snap list --all`); the active revision is never listed. `snap set system refresh.retain=2` keeps it low in the future."
+[rule.source]
+url = "https://snapcraft.io/docs/how-to-guides/manage-snaps/manage-updates/index.html"
+read_on = 2026-10-15
+quote = "The default is refresh.retain=3 on Ubuntu Core systems and refresh.retain=2 on classic Ubuntu systems."
+
+[[rule]]
+id = "flatpak-unused"
+name = "flatpak: unused runtimes and extensions"
+category = "system"
+level = "safe"
+[rule.detect]
+kind = "probe"
+probe = "flatpak-unused"
+paths = ["/var/lib/flatpak", "~/.local/share/flatpak"]
+[rule.cleanup]
+kind = "command"
+command = "flatpak uninstall --unused --assumeyes"
+fallback = "none"
+requires = "user"
+[rule.explain]
+why = "Runtimes and extensions no installed application references any more, left behind by upgrades and uninstalls."
+regenerate = "Reinstalled automatically if an application needs them."
+cost = "none"
+notes = "Never `--delete-data`: that would remove application data in ~/.var/app."
+[rule.source]
+url = "https://manpages.ubuntu.com/manpages/noble/en/man1/flatpak-uninstall.1.html"
+read_on = 2026-10-15
+quote = "--unused: Remove unused refs on the system."
+
+[[rule]]
+id = "tracker3-index"
+name = "GNOME file index (tracker3)"
+category = "system-index"
+level = "safe"
+[rule.detect]
+kind = "path"
+paths = ["$XDG_CACHE_HOME/tracker3", "~/.cache/tracker3"]
+[rule.cleanup]
+kind = "command"
+command = "tracker3 reset --filesystem"
+fallback = "rm"
+requires = "user"
+[rule.explain]
+why = "The search index GNOME builds of the home directory; on a disk full of models and node_modules it can reach several GB."
+regenerate = "Rebuilt in the background by the indexer."
+cost = "search results incomplete until re-indexed"
+notes = "To stop it growing: exclude model and project folders in GNOME Settings > Search, or `gsettings set org.freedesktop.Tracker3.Miner.Files ignored-directories`."
+[rule.source]
+url = "https://manpages.ubuntu.com/manpages/noble/en/man1/tracker3-reset.1.html"
+read_on = 2026-10-15
+quote = "--filesystem: Removes data stored by tracker-miner-fs(1). The miner will automatically recreate its cache from the filesystem when it restarts."
+
+[[rule]]
+id = "thumbnails"
+name = "Thumbnail cache"
+category = "system-index"
+level = "safe"
+[rule.detect]
+kind = "path"
+paths = ["$XDG_CACHE_HOME/thumbnails", "~/.cache/thumbnails"]
+[rule.cleanup]
+kind = "rm"
+requires = "user"
+[rule.explain]
+why = "Image previews generated by the file manager."
+regenerate = "Regenerated when a folder is opened."
+cost = "none"
+[rule.source]
+url = "to-verify"
+read_on = 2026-10-15
+quote = "(freedesktop thumbnail spec to cite before release)"
+
+[[rule]]
+id = "tmp-pytest"
+name = "pytest temporary directories"
+category = "system"
+level = "safe"
+[rule.detect]
+kind = "pattern"
+glob = "/tmp/pytest-of-*"
+[rule.cleanup]
+kind = "rm"
+requires = "user"
+[rule.explain]
+why = "Temporary files of test runs (`tmp_path` fixtures); pytest keeps the last three runs and never cleans older ones left by crashed runs."
+regenerate = "Recreated at the next test run."
+cost = "none"
+[rule.in_use]
+processes = ["pytest", "python"]
+[rule.source]
+url = "https://docs.pytest.org/en/stable/how-to/tmp_path.html"
+read_on = 2026-10-15
+quote = "{temproot}/pytest-of-{user}/pytest-{num}/{testname}/ ... the last 3 temporary directories are kept"
+
+[[rule]]
+id = "gpu-compile-caches"
+name = "GPU and compiler caches (vLLM, Triton, torch inductor, NVIDIA)"
+category = "system-index"
+level = "safe"
+[rule.detect]
+kind = "path"
+paths = ["~/.cache/vllm", "~/.triton", "~/.cache/torch_extensions", "~/.cache/torchinductor_*", "~/.nv/ComputeCache", "~/.cache/flashinfer", "~/.cache/tvm-ffi"]
+[rule.cleanup]
+kind = "rm"
+requires = "user"
+[rule.explain]
+why = "Compiled kernels and graphs cached by inference engines and CUDA; rebuilt on first use."
+regenerate = "Recompiled at the next model load (a slower first start, minutes for vLLM)."
+cost = "minutes of CPU/GPU at the next start"
+[rule.in_use]
+processes = ["vllm", "sglang", "python"]
+[rule.source]
+url = "https://docs.vllm.ai/en/latest/configuration/env_vars.html"
+read_on = 2026-10-15
+quote = "VLLM_CACHE_ROOT: Root directory for vLLM cache files. Defaults to ~/.cache/vllm unless XDG_CACHE_HOME is set"
+
+[[rule]]
+id = "browser-caches"
+name = "Browser caches (Firefox, Chrome, Chromium, Brave)"
+category = "browser"
+level = "safe"
+[rule.detect]
+kind = "path"
+paths = ["~/.cache/mozilla", "~/.cache/google-chrome", "~/.cache/chromium", "~/.cache/BraveSoftware", "~/snap/firefox/common/.cache/mozilla"]
+[rule.cleanup]
+kind = "rm"
+requires = "user"
+[rule.explain]
+why = "Web page caches; profiles, bookmarks and passwords live in ~/.config or ~/.mozilla and are never touched."
+regenerate = "Refilled while browsing."
+cost = "slower first page loads"
+[rule.in_use]
+processes = ["firefox", "chrome", "chromium", "brave"]
+[rule.source]
+url = "to-verify"
+read_on = 2026-10-15
+quote = ""
+
+[[rule]]
+id = "crash-dumps"
+name = "Crash reports and core dumps"
+category = "system"
+level = "safe"
+[rule.detect]
+kind = "path"
+paths = ["/var/crash", "/var/lib/systemd/coredump"]
+[rule.cleanup]
+kind = "rm"
+requires = "sudo"
+[rule.explain]
+why = "Crash reports (apport) and core dumps kept for debugging."
+regenerate = "Not needed unless a bug is being reported."
+cost = "none"
+[rule.source]
+url = "to-verify"
+read_on = 2026-10-15
+quote = ""
+
+[[rule]]
+id = "snapshots"
+name = "Timeshift and filesystem snapshots"
+category = "snapshot"
+level = "never"
+[rule.detect]
+kind = "path"
+paths = ["/timeshift", "/run/timeshift", "/.snapshots"]
+[rule.cleanup]
+kind = "none"
+[rule.explain]
+why = "System restore points. Shown so the user knows their size; managed only from Timeshift or the filesystem's own tools."
+regenerate = "—"
+cost = "—"
+[rule.source]
+url = "project brief §8"
+read_on = 2026-10-15
+quote = "toute action sur les toolchains CUDA et les instantanes — hors perimetre"
