@@ -104,8 +104,8 @@ du script) en statique, valides visuellement ; `locales/` complets en `en` et `f
 - [x] Ecran de chargement (compteurs reels : octets, fichiers, dossiers, secondes ; etape
       « mesure » puis « regles ») ; icone (treemap, une tuile rayee cochee) et `.desktop`
       — 2026-10-16
-- [ ] Validation visuelle des trois onglets + chargement (captures du 2026-10-16 : onglets
-      OK, carte Projets etait a mi-largeur → corrige au commit 9)
+- [x] Validation visuelle des trois onglets (captures du 2026-10-16, puis Projets en pleine
+      largeur et en sombre : « pour moi, c'est bon ») — etape 3 close
 
 ## Etape 4. Assemblage et release 0.1.0
 
@@ -114,8 +114,12 @@ testes sur la machine de dev.
 
 - [x] Branchement interface ↔ coeur (appels directs a `crates/core`, scan en tache de fond)
       — fait des le spike, 2026-10-16
-- [ ] Paquets : `cargo-deb`, `cargo-generate-rpm`, AppImage (`linuxdeploy`/`appimagetool`) ;
-      test d'installation des trois sur la machine de dev
+- [x] Paquets : `packaging/build.sh` → `dist/` : `.deb` (cargo-deb), `.rpm`
+      (cargo-generate-rpm), AppImage (appimagetool) ; metadonnees dans
+      `crates/app/Cargo.toml` ; `.deb` installe et teste dans le cloud (Ubuntu 24.04) —
+      2026-10-16
+- [ ] Test d'installation des trois sur la machine de dev (le `.deb` au moins ; `.rpm`
+      verifie par `rpm -qpi` si `rpm` est present)
 - [ ] Depot `blackberrylabs/cleanator` (LICENSE MIT, README minimal) — push sur accord
 - [ ] Tag `v0.1.0`, release, note de version
 

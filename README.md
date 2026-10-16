@@ -5,8 +5,8 @@ images, package caches, AI assistants' histories: Cleanator shows where the spac
 classifies what can go (`safe` / `review` / `never`), and writes a shell script you read and
 run yourself. **It never deletes anything.**
 
-> Status: **pre-release.** The core (`cleanator-cli`) works; the desktop app is being built.
-> Everything the tool knows is in [`rules/`](rules/) — 70 declarative rules, each with its
+> Status: **pre-release.** The core and the desktop app work; packages exist but no release
+> is published yet. Everything the tool knows is in [`rules/`](rules/) — 70 declarative rules, each with its
 > reason, how the item regenerates, what it costs, and the documentation it is based on.
 > Disagree with one? Open an issue quoting its `id`.
 
@@ -48,6 +48,20 @@ speaker read it, open a pull request.
 sessions on a headless GPU box, and scripts. Both ship in the same package and share the
 same rules, probes and classifier.
 
+## Install
+
+Packages are built by `packaging/build.sh` and will be attached to GitHub Releases:
+
+```sh
+sudo apt install ./cleanator_0.1.0-1_amd64.deb        # Debian, Ubuntu
+sudo dnf install ./cleanator-0.1.0-1.x86_64.rpm       # Fedora
+chmod +x Cleanator-0.1.0-x86_64.AppImage && ./Cleanator-0.1.0-x86_64.AppImage   # any distro
+```
+
+Each package ships `cleanator` (desktop) and `cleanator-cli`, the `.desktop` entry and the
+icons. The desktop app renders with Vulkan when available and falls back to software
+rendering otherwise. From source: `cargo build --release` with a current stable Rust.
+
 ## Try the core
 
 ```sh
@@ -66,8 +80,10 @@ that found nothing. `--no-probes` skips the tool probes (docker, ollama, snap…
 
 - `crates/core` — scanner, rules engine, probes, classifier, script generator (library)
 - `crates/cli` — `cleanator-cli`
-- `crates/app` — desktop app (iced), not built yet
+- `crates/app` — `cleanator`, the desktop app (iced)
 - `rules/` — the rules, `docs/rules.md` — their schema
+- `locales/` — interface strings (`en`, `fr`), `assets/` — icon and desktop entry
+- `packaging/build.sh` — builds the `.deb`, `.rpm` and AppImage into `dist/`
 
 ## License
 

@@ -7,6 +7,29 @@ titre, ce qui a ete decide, par qui, ce qui a ete ecarte, et la preuve (fichier,
 
 ---
 
+## 2026-10-16, etape 3 close ; paquets .deb, .rpm, AppImage
+
+- Alexandre, capture de Projets en pleine largeur (sombre) : « pour moi, c'est bon, tu
+  peux continuer ». « En usage » a 30,1 Go sur cette capture : Eliot compilait (ses
+  `target/` tenus par rustc) — la detection R7 fait son travail, rien a changer.
+- Fait par Claude : `packaging/build.sh` construit les binaires, lance les tests, puis
+  produit dans `dist/` le `.deb` (cargo-deb, `--no-build`, un seul paquet pour les deux
+  binaires), le `.rpm` (cargo-generate-rpm) et l'AppImage (appimagetool telecharge une fois
+  dans `packaging/.tools/`, hors git). Metadonnees dans `crates/app/Cargo.toml` :
+  dependances fenetre declarees a la main (libxkbcommon0, wayland ou X11) car chargees par
+  dlopen ; Vulkan en simple recommandation (rendu logiciel sinon). Icones hicolor 16→512 +
+  SVG, `.desktop`, README, copyright. Teste dans le cloud (Ubuntu 24.04) : `dpkg -i` puis
+  `cleanator-cli recommend` depuis `/usr/bin` ; AppImage extraite et verifiee.
+  `rpm` absent du cloud : metadonnees non verifiees par `rpm -qpi`.
+- Incident evite : en recopiant `.gitignore` depuis le cloud, la ligne `/00_cadrage/` avait
+  disparu (le cloud n'a pas ce dossier) ; vu au `git status` avant tout commit, remise.
+  Regle pour la suite : `.gitignore` ne se recopie plus depuis le cloud, il s'edite sur
+  place.
+- README : section « Install » (apt / dnf / AppImage), layout a jour, statut « core et
+  app fonctionnent, pas de release publiee ».
+- Commit 10. Reste etape 4 : installer le `.deb` sur la machine d'Alexandre, corriger
+  l'adresse de commit, puis depot GitHub + tag v0.1.0 (push et release sur son accord).
+
 ## 2026-10-16, captures des trois onglets ; chargement ; icone
 
 - Captures d'Alexandre (Explorateur, Assistants IA, Projets, en francais) : « si tu ne vois

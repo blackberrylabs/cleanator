@@ -72,6 +72,9 @@ ce soit : `script` ecrit un fichier que l'on lit avant de le lancer.
 6. Script (plus tard, quand les recommandations auront ete relues) :
    `cd /home/nushoko/Bureau/Logiciels/Cleanator && ./target/release/cleanator-cli script /home/nushoko -o 00_cadrage/clean.sh` puis lire `00_cadrage/clean.sh` avant toute chose.
 
+7. Paquets (une fois `cargo install cargo-deb cargo-generate-rpm` fait) :
+   `cd /home/nushoko/Bureau/Logiciels/Cleanator && ./packaging/build.sh` → `dist/` (`.deb`, `.rpm`, AppImage, `SHA256SUMS`). Installer le `.deb` demande sudo et l'accord d'Alexandre : `sudo apt install ./dist/cleanator_0.1.0-1_amd64.deb`.
+
 Revenir en arriere : `cargo build` ne touche que `target/` ; le depot git local se remet a
 un commit avec `git checkout -- .` ; aucune commande ci-dessus ne modifie le disque hors de
 `Logiciels/Cleanator`.
@@ -91,3 +94,5 @@ R10 bis metadonnees seulement, fichiers d'identification jamais touches.
   `crates/cli` (`cleanator-cli`), `crates/app` (`cleanator`, iced 0.13.1), `locales/` (`en.json`,
   `fr.json`), `assets/` (icone SVG/PNG, `.desktop`), `README.md` (anglais), `LICENSE` (MIT).
 - `00_cadrage/` est hors git (`.gitignore`) : inventaire personnel, captures, sorties.
+  Le `.gitignore` s'edite sur place, jamais recopie depuis le cloud (incident du 2026-10-16).
+- `packaging/build.sh` → `dist/` (hors git) ; `packaging/.tools/` (appimagetool, hors git).
