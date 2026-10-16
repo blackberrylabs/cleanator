@@ -35,7 +35,7 @@ kind = "path"
 paths = ["/var/cache/apt/archives"]
 [rule.cleanup]
 kind = "command"
-command = "sudo apt-get clean"
+command = "sudo apt-get -o DPkg::Lock::Timeout=60 clean"
 fallback = "none"
 requires = "sudo"
 [rule.explain]
@@ -57,7 +57,7 @@ kind = "probe"
 probe = "apt-autoremove-dry-run"
 [rule.cleanup]
 kind = "command"
-command = "sudo apt-get autoremove"
+command = "sudo apt-get -o DPkg::Lock::Timeout=60 autoremove"
 fallback = "none"
 requires = "sudo"
 [rule.explain]

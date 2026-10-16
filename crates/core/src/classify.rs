@@ -63,6 +63,9 @@ pub struct Recommendation {
     /// Classified, but used within the dormancy window: shown (treemap colour, `--explain`)
     /// and never proposed in the script.
     pub recent: bool,
+    /// Below the proposal floor (`ClassifyOptions::min_proposal_size`, 1 MiB): a residue
+    /// left by a previous cleanup or an empty store. Classified and shown, never proposed.
+    pub negligible: bool,
     /// Why the last-use date cannot be trusted, when it cannot: `noatime` (last use
     /// unknown, never proposed) or the mass-read day (proposed only once that day is older
     /// than the window). Such items are also `recent`.
@@ -125,6 +128,9 @@ pub struct ClassifyOptions {
     /// Access-time context (mounts, mass-read day). `None` detects it from the system and
     /// the scan; tests inject one.
     pub atime: Option<AtimeContext>,
+    /// Items reclaiming less than this are not proposed (default 1 MiB): a `pip cache
+    /// purge` for 31 KB or an empty trash is noise, not a recommendation.
+    pub min_proposal_size: u64,
 }
 
 impl Default for ClassifyOptions {
@@ -135,6 +141,7 @@ impl Default for ClassifyOptions {
             in_use_checks: true,
             now: chrono::Utc::now().timestamp(),
             atime: None,
+            min_proposal_size: 1024 * 1024,
         }
     }
 }
@@ -259,6 +266,10 @@ pub fn classify(scan: &Scan, rules: &RuleSet, env: &Env, opts: &ClassifyOptions)
     for r in &recommendations {
         if r.recent {
             *totals.counts.entry("recent".to_string()).or_default() += 1;
+            continue;
+        }
+        if r.negligible {
+            *totals.counts.entry("negligible".to_string()).or_default() += 1;
             continue;
         }
         *totals
@@ -875,6 +886,7 @@ fn finish(
     }
 
     let reclaimable = cand.reclaimable.unwrap_or(cand.size);
+    let negligible = rule.level != Level::Never && reclaimable < opts.min_proposal_size;
     Some(Recommendation {
         id: format!("{}::{}", rule.id, cand.key),
         rule_id: rule.id.clone(),
@@ -902,6 +914,7 @@ fn finish(
         requires,
         in_use,
         recent: recent_item,
+        negligible,
         atime_caveat,
         source_url: rule.source.url.clone(),
         source_to_verify: rule.source_to_verify(),

@@ -3,6 +3,43 @@
 All notable changes to Cleanator. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.1.1] — unreleased
+
+Lessons from the first real cleanup (a 595 GB home, 54 GiB freed) and from the first
+readers.
+
+### Fixed
+
+- **A failing block no longer stops the script.** The first real run died on
+  `sudo apt-get clean` because another `apt-get` held the lock; `set -e` then skipped the
+  thirteen remaining snap revisions and the final balance. The script now runs every block
+  through a small `run` wrapper, records failures, always prints "Free after", lists the
+  failed blocks and exits non-zero if there were any. `apt-get` waits up to 60 s for the
+  lock.
+- **System directories are emptied, not removed.** `rm` rules with `requires = "sudo"`
+  rendered a bare `rm -rf -- '/var/crash'`: no `sudo`, and the directory apport expects
+  would have gone. They now render `sudo find <path> -mindepth 1 -delete`.
+- **`safe` rules with their own dormancy window honour it.** `claude-code-caches` promised
+  to leave entries younger than 7 days alone; the window only applied to `review` rules.
+- **Residues are not proposed.** After a cleanup, an empty trash, a 0 B journal or an 8 KB
+  cache were proposed again. Items reclaiming less than 1 MiB are classified and shown but
+  never proposed.
+- **Access times are trusted only when recorded.** Atime-measured rules (models, Python
+  environments) read the mount options: on `noatime` the last use is unknown and the item
+  is shown but never proposed, with no misleading date. A day that dominates the large
+  files' access times (≥ 25 %, ≥ 2× the next day, ≥ 200 files) is a mass read — an indexer
+  or a backup; items last read that day are proposed only once that day is older than the
+  window, and the note gives the date.
+- `SHA256SUMS` in `dist/` no longer lists itself.
+
+### Changed
+
+- The app remembers language and theme (`~/.config/cleanator/settings.json`, the only file
+  it writes besides the cleanup script); `CLEANATOR_LANG` / `CLEANATOR_THEME` override.
+- Language control is an `EN · FR` picker with the active language highlighted.
+- KPI cards show a dash while scanning; the footer follows the language.
+- `cleanator-cli rules` labels `observed` sources; the app says so instead of a docs link.
+
 ## [0.1.0] — 2026-10-16
 
 First release. A disk cleaner for developers who run AI on Linux: it shows where the space
@@ -33,7 +70,7 @@ deletes anything.**
   containers, models loaded in Ollama. Nothing in use is ever proposed.
 - **Dormancy**: items used in the last 60 days (configurable) are classified and shown but
   not proposed; active projects raise the level of their regenerable content.
-- **Script generator**: `set -euo pipefail`, `df` before and after, one commented block per
+- **Script generator**: `set -euo pipefail` (relaxed in 0.1.1), `df` before and after, one commented block per
   item with the rule id and the reason, `safe` items removed, `review` items moved to the
   trash (`gio trash`), tool commands for managed stores, user block then `sudo` block.
 - **Desktop app** (`cleanator`, Rust + iced): squarified treemap with drill-down coloured by
@@ -58,4 +95,5 @@ deletes anything.**
 - The `.rpm` is built but has not been installed on a Fedora machine yet.
 - No duplicate-file detection yet.
 
+[0.1.1]: https://github.com/blackberrylabs/cleanator/compare/v0.1.0...main
 [0.1.0]: https://github.com/blackberrylabs/cleanator/releases/tag/v0.1.0

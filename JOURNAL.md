@@ -7,6 +7,29 @@ titre, ce qui a ete decide, par qui, ce qui a ete ecarte, et la preuve (fichier,
 
 ---
 
+## 2026-10-16, premier nettoyage reel : 54,1 Gio ; script resilient ; residus
+
+- Alexandre a lance le script `safe` : bloc utilisateur complet (Docker build cache
+  16,56 Go, pip 3 974 fichiers, npm 1,5 Gio, images Docker 1,12 Go, uv, 563 `rm`),
+  bloc systeme arrete au 5e element : `sudo apt-get clean` → « Could not get lock
+  /var/lib/apt/lists/lock » (un autre apt-get tournait), et `set -e` a tout arrete : 13
+  revisions snap, apt clean, /var/crash non faits, pas de « Free after ». Bilan par `df` :
+  1 000 460 → 1 055 869 Mio, **54,1 Gio liberes** pour 57,5 Go annonces (2,4 Go restants
+  dans le script suite). Estimation juste a < 1 Go.
+- Decision (soumise, acceptee : « d'accord avec tes changements tant que ca ameliore ») :
+  le script passe de `set -euo pipefail` a `set -uo pipefail` + enveloppe `run` par bloc
+  qui consigne l'echec et continue ; bilan toujours affiche, liste des blocs echoues, code
+  de sortie 1 s'il y en a ; `apt-get -o DPkg::Lock::Timeout=60`. Mecanique testee sur un
+  script jetable dans le cloud (deux echecs consignes, bilan, exit 1) + `bash -n` sur un
+  script genere.
+- Second passage (`clean_safe_2026-10-16_suite.sh`, 24 elements) : reproposait corbeille
+  164 K, journal 0 B, /var/crash 4 K, Playwright 8 K, tracker 8 K → plancher de
+  proposition 1 Mio (`ClassifyOptions.min_proposal_size`, `Recommendation.negligible`) :
+  classe, affiche, jamais propose.
+- CHANGELOG : section 0.1.1 (Fixed / Changed). README principe 1 mis a jour. Commit 18.
+- Reste etape 6 : Alexandre lance le script suite (regenere apres recompilation), puis
+  release 0.1.1 (paquets, tag, push, release sur accord), puis texte de presentation.
+
 ## 2026-10-16, premier script reel relu : deux defauts corriges avant execution
 
 - Alexandre : « on passe a la suite ou je suis cobaye ? » → cobaye. Script `safe` genere

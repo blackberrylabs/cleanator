@@ -225,7 +225,7 @@ fn print_report(report: &Report, explain: bool) {
         let items: Vec<_> = report
             .recommendations
             .iter()
-            .filter(|r| r.effective_level == level && !r.recent)
+            .filter(|r| r.effective_level == level && !r.recent && !r.negligible)
             .collect();
         if items.is_empty() {
             continue;

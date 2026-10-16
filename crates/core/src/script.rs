@@ -2,7 +2,11 @@
 //! and only when the user reads it and runs it.
 //!
 //! - one block per item, its rule id and *why* as comments above the command;
-//! - `set -euo pipefail`, every path single-quoted, no wildcard built at run time;
+//! - `set -uo pipefail`, every path single-quoted, no wildcard built at run time;
+//! - a block that fails is recorded and the script goes on (a locked apt, a snap that
+//!   refuses) — the user always gets the final balance and the list of what failed, and a
+//!   non-zero exit code; `set -e` would have stopped everything after it (seen on the
+//!   first real run, 2026-10-16);
 //! - user commands first, then the `sudo` block, which can be skipped;
 //! - free space measured before and after so the user sees what was gained;
 //! - `safe` items are removed, `review` items go to the trash (`gio trash`).
@@ -44,7 +48,9 @@ fn selected<'a>(report: &'a Report, opts: &ScriptOptions) -> Vec<&'a Recommendat
     report
         .recommendations
         .iter()
-        .filter(|r| r.command.is_some() && r.effective_level != Level::Never && !r.recent)
+        .filter(|r| {
+            r.command.is_some() && r.effective_level != Level::Never && !r.recent && !r.negligible
+        })
         .filter(|r| opts.include_in_use || r.in_use.is_none())
         .filter(|r| match &opts.selection {
             Selection::Safe => r.effective_level == Level::Safe,
@@ -75,7 +81,9 @@ pub fn generate(report: &Report, opts: &ScriptOptions) -> (String, usize) {
     let _ = writeln!(s, "# Items: {} ({} expected to be freed). Read every line: nothing runs until you run this file.", items.len(), human(total));
     let _ = writeln!(s, "# `safe` items are removed outright; `review` items are moved to the trash and can be restored.");
     let _ = writeln!(s, "# Each block names its rule: https://github.com/blackberrylabs/cleanator/blob/main/docs/rules.md");
-    let _ = writeln!(s, "set -euo pipefail");
+    let _ = writeln!(s, "set -uo pipefail");
+    let _ = writeln!(s, "failed=()");
+    let _ = writeln!(s, "run() {{ local rule=\"$1\"; shift; \"$@\" || {{ echo \"FAILED [$rule]: $*\" >&2; failed+=(\"$rule\"); }}; }}");
     let _ = writeln!(s);
     if uses_gio {
         let _ = writeln!(s, "command -v gio >/dev/null 2>&1 || {{ echo 'gio not found (install libglib2.0-bin): trash commands cannot run' >&2; exit 1; }}");
@@ -120,6 +128,7 @@ pub fn generate(report: &Report, opts: &ScriptOptions) -> (String, usize) {
         crate::paths::shell_quote(&report.root.to_string_lossy())
     );
     let _ = writeln!(s, "echo \"Free after: $((free_after / 1048576)) MiB — freed $(((free_after - free_before) / 1048576)) MiB\"");
+    let _ = writeln!(s, "if [ ${{#failed[@]}} -gt 0 ]; then echo \"${{#failed[@]}} block(s) failed: ${{failed[*]}} — run Cleanator again to see what is left.\" >&2; exit 1; fi");
     (s, items.len())
 }
 
@@ -144,7 +153,10 @@ fn write_item(s: &mut String, r: &Recommendation) {
         let _ = writeln!(s, "# note: {}", one_line(n));
     }
     if let Some(c) = &r.command {
-        let _ = writeln!(s, "{c}");
+        // Through `run` so a failure is recorded instead of stopping the script. Commands
+        // with shell syntax (pipes, redirections) are not expected here: rules give plain
+        // argv-style commands and paths are quoted by the renderer.
+        let _ = writeln!(s, "run {} {c}", crate::paths::shell_quote(&r.rule_id));
     }
 }
 
@@ -187,6 +199,7 @@ mod tests {
             requires: requires.into(),
             in_use: in_use.map(str::to_string),
             recent: false,
+            negligible: false,
             atime_caveat: None,
             source_url: "u".into(),
             source_to_verify: false,
@@ -255,9 +268,11 @@ mod tests {
         let (text, n) = generate(&rep, &ScriptOptions::default());
         assert_eq!(n, 2);
         assert!(text.starts_with("#!/usr/bin/env bash"));
-        assert!(text.contains("set -euo pipefail"));
-        assert!(text.contains("rm -rf -- '/home/u/pip-cache'"));
-        assert!(text.contains("sudo apt-get clean"));
+        assert!(text.contains("set -uo pipefail"), "no -e: a failing block must not stop the rest");
+        assert!(text.contains("run 'pip-cache' rm -rf -- '/home/u/pip-cache'"));
+        assert!(text.contains("run 'apt-archives' sudo apt-get clean"));
+        assert!(text.contains("block(s) failed"), "the balance names the failed blocks");
+        assert!(text.contains("Free after"));
         assert!(
             !text.contains("gio trash"),
             "review items are not in the safe selection"

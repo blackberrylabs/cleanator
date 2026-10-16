@@ -32,8 +32,10 @@ the only thing it ever writes is a script with the reason above each command.
 ## Principles
 
 1. **Never deletes.** It writes a script: one block per item, the reason as a comment,
-   the exact command, `set -euo pipefail`, every path quoted. `safe` items are removed by
-   the script, `review` items go to the trash.
+   the exact command, every path quoted. A block that fails (a locked apt, a snap that
+   refuses) is recorded and the script goes on, so you always get the final balance and
+   the list of what failed. `safe` items are removed by the script, `review` items go to
+   the trash.
 2. **What it does not know is `never`.** No rule, no proposal.
 3. **Managed stores are cleaned by their own tool.** `ollama rm`, `docker image prune`,
    `uv cache clean`, `hf cache rm`, `snap remove --revision` — never `rm` inside a store

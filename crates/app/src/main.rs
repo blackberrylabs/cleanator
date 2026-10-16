@@ -1019,7 +1019,7 @@ impl App {
             let recs: Vec<&Recommendation> = report
                 .recommendations
                 .iter()
-                .filter(|r| r.effective_level == level && !r.recent)
+                .filter(|r| r.effective_level == level && !r.recent && !r.negligible)
                 .collect();
             if recs.is_empty() {
                 continue;
@@ -1359,7 +1359,11 @@ fn chrono_now() -> i64 {
 }
 
 fn selectable(r: &Recommendation) -> bool {
-    r.in_use.is_none() && r.command.is_some() && !r.recent && r.effective_level != Level::Never
+    r.in_use.is_none()
+        && r.command.is_some()
+        && !r.recent
+        && !r.negligible
+        && r.effective_level != Level::Never
 }
 
 // ------------------------------------------------------------------ helpers
