@@ -57,7 +57,11 @@ ce soit : `script` ecrit un fichier que l'on lit avant de le lancer.
 
 4. Tests et lint apres toute modification : `cd /home/nushoko/Bureau/Logiciels/Cleanator && cargo test && cargo clippy --all-targets`
 
-5. Script (plus tard, quand les recommandations auront ete relues) :
+5. Application de bureau (spike iced) : `cd /home/nushoko/Bureau/Logiciels/Cleanator && cargo build --release 2>&1 | tail -1 && ./target/release/cleanator`
+   (la premiere compilation d'iced prend plusieurs minutes ; `CLEANATOR_THEME=dark` pour
+   demarrer en sombre ; un chemin en argument pour analyser autre chose que le home).
+
+6. Script (plus tard, quand les recommandations auront ete relues) :
    `cd /home/nushoko/Bureau/Logiciels/Cleanator && ./target/release/cleanator-cli script /home/nushoko -o 00_cadrage/clean.sh` puis lire `00_cadrage/clean.sh` avant toute chose.
 
 Revenir en arriere : `cargo build` ne touche que `target/` ; le depot git local se remet a

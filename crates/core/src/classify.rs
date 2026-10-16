@@ -1083,7 +1083,11 @@ mod tests {
             .all(|r| r.command.is_none() && r.effective_level == Level::Never));
 
         let backup = by_rule("backup-directories");
-        assert_eq!(backup.len(), 2, "the Claude_backup dir and the .tar.gz: {backup:?}");
+        assert_eq!(
+            backup.len(),
+            2,
+            "the Claude_backup dir and the .tar.gz: {backup:?}"
+        );
 
         assert!(report.totals.safe > 0 && report.totals.review > 0);
         let ids: HashSet<&str> = report

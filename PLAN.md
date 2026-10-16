@@ -46,7 +46,7 @@ niveau, pourquoi, regeneration, cout, source (documentation de l'outil, lue et d
       les venvs (disposables par conception) — 0 incoherence
 - [ ] Avant release : sources `to-verify` ci-dessus (bloquant)
 
-## Etape 2. Coeur Rust en ligne de commande (`cleanator-cli`) (ouverte le 2026-10-16 dans la nuit)
+## Etape 2. Coeur Rust en ligne de commande (`cleanator-cli`) (ouverte le 2026-10-16 dans la nuit | close le 2026-10-16)
 
 Resultat visible attendu : `cleanator-cli scan ~ --json` sort un arbre dont les totaux
 collent a `du -sh` ; `cleanator-cli recommend` sort les recommandations ;
@@ -72,20 +72,27 @@ collent a `du -sh` ; `cleanator-cli recommend` sort les recommandations ;
       magasin, en usage signale, lien physique, script par selection) ; `cargo clippy` propre
 - [x] Test de bout en bout sur un home fictif de 3,3 Go : 13 `safe`, 11 `review`, `never`
       pour la VM Claude Desktop et les gros fichiers inconnus
-- [ ] **Matin** : compiler sur la vraie machine, scanner le vrai disque, comparer a `du`
-      (commandes dans `CLAUDE.md`)
+- [x] Compile sur la vraie machine (12 s) ; scanner = `du -sx` a l'octet pres sur 636 Go,
+      2,59 M de fichiers, 2,1 s
+- [x] Deux passes reelles ; cinq defauts corriges (un proprietaire par chemin, usage precis,
+      dormance des modeles, `skip_in_project`, exclusions) ; liste `review` relue par
+      Alexandre : « c'est bon, on continue » (2026-10-16)
 - [ ] Reprendre d'Eliot ce qui y a deja ete resolu cote Rust (structure, tests) — a lire
-- [ ] Sondeurs sur la vraie machine : Docker (49 Go recuperables attendus), Hugging Face
-      (43 Go), snap (15 revisions) — verifier les chiffres contre `docker system df`
+- [x] Sondeurs sur la vraie machine : Docker (15,5 Go de cache de build, 18 Go tensorcash,
+      3 poa-banc, image <none>), snap (15 revisions), journald, git (3 re-clonables), HF
+- [ ] A reporter en v1.1 : la date d'acces est fragile (un passage le 2026-09-02 a tout
+      remis a zero : sauvegarde ou indexeur) — croiser avec mtime, avertir en `noatime`
+- [ ] A reporter en v1.1 : regrouper les petits elements (595 `safe` dont ~400 `__pycache__`)
 
-## Etape 3. Spike iced, puis maquette d'interface
+## Etape 3. Spike iced, puis maquette d'interface (ouverte le 2026-10-16)
 
 Resultat visible attendu : d'abord le spike — treemap + liste a cocher en iced sur donnees
 fictives, une journee, regarde par Alexandre (« ca me plait » ou retour a Tauri + React) ;
 puis les ecrans (bandeau, treemap, recommandations, assistants, projets dormants, apercu
 du script) en statique, valides visuellement ; `locales/` complets en `en` et `fr`.
 
-- [ ] Spike : version d'iced figee, treemap au canvas, liste avec cases, theme clair/sombre
+- [x] Spike : iced 0.13.1, treemap au canvas, liste avec cases, theme clair/sombre, i18n —
+      ecrit et compile le 2026-10-16, a juger a l'ecran
 - [ ] Decision d'Alexandre sur le spike (entree JOURNAL) — si non : retour a Tauri + React,
       le coeur ne change pas
 - [ ] Direction visuelle (reference Sniffnet : cartes nettes, couleurs par categorie) et

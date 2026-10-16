@@ -7,6 +7,39 @@ titre, ce qui a ete decide, par qui, ce qui a ete ecarte, et la preuve (fichier,
 
 ---
 
+## 2026-10-16, spike iced ecrit (etape 3)
+
+- Fait par Claude : `crates/app` = l'application reelle sur le coeur reel (scan +
+  classification en tache de fond), bandeau de cinq compteurs, treemap squarifie au
+  canvas (descente au clic, remonter, couleurs par categorie de regle, tuile « fichiers »
+  et « … »), liste des recommandations avec cases (safe / review ; en usage affiche,
+  non cochable), « Tout ce qui est sur », « Copier le script » (presse-papiers) et
+  « Enregistrer le script » (`~/cleanator-cleanup.sh`), theme clair/sombre, toutes les
+  chaines dans `locales/en.json` et `fr.json` (test : memes cles des deux cotes), langue
+  prise du systeme. iced fige en **0.13.1** (la 0.14 existe ; la 0.13 est celle dont l'API
+  est la mieux connue — a reevaluer avant la release). Compile sans bibliotheque systeme,
+  26 tests, clippy propre. Non lance par Claude (pas d'ecran) : le jugement visuel est a
+  Alexandre.
+- Remarque d'Alexandre : « ca reste un logiciel open source assez interessant pour un
+  developpeur, le fait qu'il soit ecrit en Rust » — oui : coeur Rust, pas de webview, un
+  binaire, 2,6 M de fichiers en 2 s.
+- Etat : commit 4 et premier lancement a faire par Alexandre ; decision sur le spike a
+  journaliser (« ca me plait » ou retour a Tauri + React, le coeur ne change pas).
+
+## 2026-10-16, etape 2 close, etape 3 ouverte
+
+- Fait par Alexandre : commit 3, seconde passe reelle : 57,6 Go safe (595), 120,7 Go
+  review (210), 1,1 Go en usage (1), 35,8 Go never (22) ; plus aucun doublon ; liste
+  `review` relue : « c'est bon, on continue ».
+- Observe : beaucoup de dates d'acces au 2026-09-02 (quelque chose a lu tout le disque ce
+  jour-la) — la dormance par acces est fragile ; a croiser avec mtime en v1.1 ; les
+  modeles n'apparaissent plus en review car tous lus depuis moins de 60 jours.
+- Question d'Alexandre : Rust joue-t-il sur la vitesse ? Reponse : 2,59 M de fichiers en
+  2,1 s a froid (parcours parallele, metadonnees seulement, code natif) contre plusieurs
+  minutes pour `du` ; C ou Go feraient pareil, Python non.
+- Etape 3 ouverte : spike iced (treemap + liste a cocher), valide visuellement avant tout
+  branchement definitif.
+
 ## 2026-10-16 (matin), premiere passe reelle et correction du classifieur
 
 - Fait par Alexandre : commit 2, compilation en 12 s sur la machine, scan du home.
