@@ -34,9 +34,11 @@ fn main() -> iced::Result {
 enum Message {
     Scanned(Result<(Arc<Scan>, Arc<Report>), String>),
     Treemap(TreemapEvent),
+    SetView(View),
     Up,
     Toggle(String, bool),
     ToggleGroup(String, bool),
+    ToggleIds(Vec<String>, bool),
     Expand(String),
     OpenGroup(String),
     OpenDocs(String),
@@ -60,6 +62,13 @@ enum Phase {
     Failed(String),
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum View {
+    Explorer,
+    Assistants,
+    Projects,
+}
+
 struct App {
     lang: Lang,
     strings: Strings,
@@ -73,6 +82,7 @@ struct App {
     expanded: HashSet<String>,
     open_groups: HashSet<String>,
     status: String,
+    view: View,
 }
 
 /// Rules with more items than this are shown as one group row, opened on demand.
@@ -102,6 +112,7 @@ impl App {
             expanded: HashSet::new(),
             open_groups: HashSet::new(),
             status,
+            view: View::Explorer,
         };
         (app, start_scan(root))
     }
@@ -161,6 +172,7 @@ impl App {
                     self.current = p;
                 }
             }
+            Message::SetView(v) => self.view = v,
             Message::Up => {
                 if self.current != self.root {
                     if let Some(parent) = self.current.parent() {
@@ -187,6 +199,15 @@ impl App {
                         } else {
                             self.selected.remove(&rec.id);
                         }
+                    }
+                }
+            }
+            Message::ToggleIds(ids, on) => {
+                for id in ids {
+                    if on {
+                        self.selected.insert(id);
+                    } else {
+                        self.selected.remove(&id);
                     }
                 }
             }
@@ -277,7 +298,7 @@ impl App {
         let header = self.view_header();
         let body: Element<'_, Message> = match (&self.phase, &self.scan, &self.report) {
             (Phase::Ready, Some(scan), Some(report)) => {
-                row![self.view_explorer(scan, report), self.view_panel(report)]
+                row![self.view_left(scan, report), self.view_panel(report)]
                     .spacing(14)
                     .height(Length::Fill)
                     .into()
@@ -373,6 +394,275 @@ impl App {
         .into()
     }
 
+    fn view_left<'a>(&'a self, scan: &'a Scan, report: &'a Report) -> Element<'a, Message> {
+        let tab = |label: String, v: View, current: View| -> Element<'a, Message> {
+            let b = button(text(label).size(12)).padding([4, 10]);
+            if v == current {
+                b.style(button::primary).into()
+            } else {
+                b.style(button::text).on_press(Message::SetView(v)).into()
+            }
+        };
+        let tabs = row![
+            tab(self.t("tabs.explorer"), View::Explorer, self.view),
+            tab(self.t("tabs.assistants"), View::Assistants, self.view),
+            tab(self.t("tabs.projects"), View::Projects, self.view),
+        ]
+        .spacing(4);
+        let body: Element<'a, Message> = match self.view {
+            View::Explorer => self.view_explorer(scan, report),
+            View::Assistants => self.view_assistants(report),
+            View::Projects => self.view_projects(scan, report),
+        };
+        column![tabs, body]
+            .spacing(8)
+            .width(Length::FillPortion(13))
+            .height(Length::Fill)
+            .into()
+    }
+
+    /// Per assistant: configuration (kept), session history (review) and caches (safe),
+    /// including items classified but recent, so the picture is complete.
+    fn view_assistants<'a>(&'a self, report: &'a Report) -> Element<'a, Message> {
+        #[derive(Default)]
+        struct Row {
+            config: u64,
+            history: u64,
+            caches: u64,
+            sessions: usize,
+            oldest: Option<i64>,
+        }
+        let mut rows: BTreeMap<&'static str, Row> = BTreeMap::new();
+        for r in &report.recommendations {
+            if !r.category.starts_with("assistant") {
+                continue;
+            }
+            let Some(name) = assistant_of(r.path.as_deref().unwrap_or(&r.display)) else {
+                continue;
+            };
+            let e = rows.entry(name).or_default();
+            match r.category.as_str() {
+                "assistant-config" => e.config += r.size,
+                "assistant-history" => {
+                    e.history += r.size;
+                    e.sessions += 1;
+                    e.oldest = match (e.oldest, r.last_used) {
+                        (Some(a), Some(b)) => Some(a.min(b)),
+                        (None, b) => b,
+                        (a, None) => a,
+                    };
+                }
+                _ => e.caches += r.size,
+            }
+        }
+        let mut sorted: Vec<(&str, Row)> = rows.into_iter().collect();
+        sorted.sort_by_key(|(_, r)| std::cmp::Reverse(r.config + r.history + r.caches));
+
+        let header = row![
+            text(self.t("assistants.name"))
+                .size(11)
+                .style(text::secondary)
+                .width(Length::FillPortion(3)),
+            text(self.t("assistants.total"))
+                .size(11)
+                .style(text::secondary)
+                .width(Length::FillPortion(1)),
+            text(self.t("assistants.config"))
+                .size(11)
+                .style(text::secondary)
+                .width(Length::FillPortion(1)),
+            text(self.t("assistants.history"))
+                .size(11)
+                .style(text::secondary)
+                .width(Length::FillPortion(1)),
+            text(self.t("assistants.caches"))
+                .size(11)
+                .style(text::secondary)
+                .width(Length::FillPortion(1)),
+            text(self.t("assistants.sessions"))
+                .size(11)
+                .style(text::secondary)
+                .width(Length::FillPortion(2)),
+        ]
+        .spacing(8);
+        let mut list = column![header].spacing(6);
+        if sorted.is_empty() {
+            list = list.push(
+                text(self.t("assistants.none"))
+                    .size(12)
+                    .style(text::secondary),
+            );
+        }
+        for (name, r) in &sorted {
+            let total = r.config + r.history + r.caches;
+            let sessions = if r.sessions == 0 {
+                "—".to_string()
+            } else {
+                format!(
+                    "{} · {} {}",
+                    r.sessions,
+                    self.t("assistants.oldest"),
+                    r.oldest.map(ymd).unwrap_or_else(|| "—".into())
+                )
+            };
+            let mono = |v: u64| {
+                text(human(v))
+                    .size(12)
+                    .font(iced::Font::MONOSPACE)
+                    .width(Length::FillPortion(1))
+            };
+            list = list.push(
+                row![
+                    row![
+                        swatch(category_color("assistant-history", self.dark), 8),
+                        text(name.to_string()).size(13)
+                    ]
+                    .spacing(6)
+                    .align_y(iced::Alignment::Center)
+                    .width(Length::FillPortion(3)),
+                    mono(total),
+                    mono(r.config),
+                    mono(r.history),
+                    mono(r.caches),
+                    text(sessions)
+                        .size(11)
+                        .style(text::secondary)
+                        .width(Length::FillPortion(2)),
+                ]
+                .spacing(8)
+                .align_y(iced::Alignment::Center),
+            );
+        }
+        let head = column![
+            text(self.t("assistants.title")).size(16),
+            text(self.t("assistants.hint"))
+                .size(11)
+                .style(text::secondary),
+        ]
+        .spacing(2);
+        card(
+            column![head, scrollable(list).height(Length::Fill)]
+                .spacing(12)
+                .into(),
+        )
+        .height(Length::Fill)
+        .into()
+    }
+
+    /// Per project: regenerable weight (dependencies, builds, environments), last touch,
+    /// active or dormant, with one checkbox for everything selectable in it.
+    fn view_projects<'a>(&'a self, scan: &'a Scan, report: &'a Report) -> Element<'a, Message> {
+        #[derive(Default)]
+        struct Row {
+            regenerable: u64,
+            items: Vec<String>,
+            selectable: Vec<String>,
+            selectable_size: u64,
+        }
+        let mut rows: BTreeMap<&str, Row> = BTreeMap::new();
+        for r in &report.recommendations {
+            let Some(p) = &r.project else { continue };
+            let e = rows.entry(p.as_str()).or_default();
+            e.regenerable += r.size;
+            e.items.push(r.id.clone());
+            if selectable(r) {
+                e.selectable.push(r.id.clone());
+                e.selectable_size += r.reclaimable;
+            }
+        }
+        let mut sorted: Vec<(&str, Row)> = rows.into_iter().collect();
+        sorted.sort_by_key(|(_, r)| std::cmp::Reverse(r.regenerable));
+        let window = report.dormancy_days as i64 * 86_400;
+        let now = chrono_now();
+        let home = self.root.to_string_lossy().to_string();
+
+        let mut list = column![].spacing(6);
+        let (mut dormant_n, mut dormant_size) = (0usize, 0u64);
+        for (path, r) in &sorted {
+            let node = scan.tree.find(Path::new(path));
+            let touched = node.map(|n| n.newest_source_mtime);
+            let dormant = touched.is_some_and(|t| now - t >= window);
+            if dormant {
+                dormant_n += 1;
+                dormant_size += r.regenerable;
+            }
+            let all_on = !r.selectable.is_empty()
+                && r.selectable.iter().all(|id| self.selected.contains(id));
+            let label = format!(
+                "{:>7}  {}",
+                human(r.regenerable),
+                shorten(&path.replacen(&home, "~", 1), 48)
+            );
+            let ids = r.selectable.clone();
+            let mut cb = checkbox(label, all_on).size(16).text_size(13);
+            if !ids.is_empty() {
+                cb = cb.on_toggle(move |on| Message::ToggleIds(ids.clone(), on));
+            }
+            let state = if dormant {
+                self.t("projects.dormant")
+            } else {
+                self.t("projects.active")
+            };
+            let meta = format!(
+                "{} {} · {} · {} {} {}",
+                self.t("projects.touched"),
+                touched.map(ymd).unwrap_or_else(|| "—".into()),
+                state,
+                self.strings
+                    .t("projects.items", &[("n", &r.items.len().to_string())]),
+                self.t("projects.selectable"),
+                human(r.selectable_size)
+            );
+            list = list.push(
+                column![
+                    row![
+                        swatch(
+                            if dormant {
+                                level_color(Level::Safe, self.dark)
+                            } else {
+                                level_color(Level::Review, self.dark)
+                            },
+                            8
+                        ),
+                        cb
+                    ]
+                    .spacing(6)
+                    .align_y(iced::Alignment::Center),
+                    text(meta).size(10).style(text::secondary),
+                ]
+                .spacing(1),
+            );
+        }
+        if sorted.is_empty() {
+            list = list.push(
+                text(self.t("projects.none"))
+                    .size(12)
+                    .style(text::secondary),
+            );
+        }
+        let head = column![
+            text(self.t("projects.title")).size(16),
+            text(self.strings.t(
+                "projects.hint",
+                &[
+                    ("n", &dormant_n.to_string()),
+                    ("size", &human(dormant_size)),
+                    ("days", &report.dormancy_days.to_string())
+                ]
+            ))
+            .size(11)
+            .style(text::secondary),
+        ]
+        .spacing(2);
+        card(
+            column![head, scrollable(list).height(Length::Fill)]
+                .spacing(12)
+                .into(),
+        )
+        .height(Length::Fill)
+        .into()
+    }
+
     fn view_explorer<'a>(&'a self, scan: &'a Scan, report: &'a Report) -> Element<'a, Message> {
         let node = scan.tree.find(&self.current).unwrap_or(&scan.tree);
         let items = self.items_for(node, report);
@@ -409,7 +699,6 @@ impl App {
         .width(Length::Fill)
         .height(Length::Fill);
         card(column![head, map, self.view_legend()].spacing(10).into())
-            .width(Length::FillPortion(13))
             .height(Length::Fill)
             .into()
     }
@@ -769,6 +1058,43 @@ impl App {
         }
         col.into()
     }
+}
+
+/// Which assistant a path belongs to, from its well-known locations.
+fn assistant_of(path: &str) -> Option<&'static str> {
+    const MAP: &[(&str, &str)] = &[
+        ("/.claude", "Claude Code"),
+        ("/.cache/claude-cli-nodejs", "Claude Code"),
+        ("/.config/Claude", "Claude Desktop"),
+        ("/.codex", "Codex"),
+        ("/.gemini", "Gemini CLI"),
+        ("/.config/Cursor", "Cursor"),
+        ("/.cursor", "Cursor"),
+        ("/.config/Code", "VS Code"),
+        ("/.vscode", "VS Code"),
+        ("/.config/Windsurf", "Windsurf"),
+        ("/.windsurf", "Windsurf"),
+        ("/.codeium", "Windsurf"),
+        ("/opencode", "OpenCode"),
+        ("/.continue", "Continue"),
+        ("/JetBrains", "JetBrains"),
+        ("/.aider", "Aider"),
+        ("/.config/goose", "Goose"),
+        ("/.config/amp", "Amp"),
+        ("/.cache/zed", "Zed"),
+        ("/.hermes", "Hermes"),
+    ];
+    MAP.iter()
+        .find(|(frag, _)| path.contains(frag))
+        .map(|(_, name)| *name)
+        .or(Some("Other"))
+}
+
+fn chrono_now() -> i64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs() as i64)
+        .unwrap_or(0)
 }
 
 fn selectable(r: &Recommendation) -> bool {

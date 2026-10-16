@@ -99,8 +99,8 @@ du script) en statique, valides visuellement ; `locales/` complets en `en` et `f
       deux modes, cartes nettes, legende traduite — 2026-10-16
 - [x] Deux profondeurs d'affichage (`docs/rules.md`) et regroupement des regles nombreuses
       — dans l'app reelle, pas en statique (le spike etant l'app) — 2026-10-16
-- [ ] Vue « assistants IA » (configuration / historique / caches par assistant) et vue
-      « projets dormants » (poids regenerable par projet), BRIEF §1
+- [x] Vue « assistants IA » (configuration / historique / caches par assistant) et vue
+      « projets » (poids regenerable par projet, actif/dormant), BRIEF §1 — 2026-10-16
 - [ ] Ecran de chargement (progression du scan) ; icone de l'application
 - [ ] Validation visuelle
 

@@ -7,6 +7,21 @@ titre, ce qui a ete decide, par qui, ce qui a ete ecarte, et la preuve (fichier,
 
 ---
 
+## 2026-10-16, idees consignees ; vues « Assistants IA » et « Projets »
+
+- Alexandre : « oui consigne et tu peux continuer » → pistes de modules consignees dans
+  `00_moi/IDEES.md` (dans Cleanator : gestionnaire de modeles, assistants, projets avec
+  commits non pousses, doublons, export ; a cote sous Blackberrylabs : inventaire MCP,
+  secrets dans les traces, boite noire des agents, linter d'instructions, docteur GPU) ;
+  temoin 0 ecart.
+- Fait par Claude : onglets Explorateur / Assistants IA / Projets dans la carte de gauche.
+  Assistants : par assistant (Claude Code, Claude Desktop, Codex, Gemini, Cursor, VS Code,
+  Windsurf, OpenCode, Continue, JetBrains, Aider, Goose, Amp, Zed, Hermes) config /
+  historique / caches, sessions et plus ancienne. Projets : poids regenerable par projet,
+  touche le, actif/dormant, case qui coche tout le cochable du projet ; en-tete « N projets
+  dormants portent X Go ». Les deux comptent les elements classes mais recents. Commit 8.
+- Reste pour l'etape 3 : ecran de chargement et icone ; puis etape 4 (paquets).
+
 ## 2026-10-16, capture de la direction visuelle ; desktop + CLI ; extensibilite ; nom
 
 - Capture d'Alexandre : couleurs justes (modeles violets, venvs jaunes, .config orange
