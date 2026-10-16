@@ -7,6 +7,21 @@ titre, ce qui a ete decide, par qui, ce qui a ete ecarte, et la preuve (fichier,
 
 ---
 
+## 2026-10-16, second passage reussi ; 0.1.1 prete a sortir
+
+- Alexandre : script suite (18 elements, mecanique `run`) execute sans aucun echec : 12
+  revisions snap, tracker3 reinitialise (tue `tracker-miner-fs-3`, commande officielle),
+  659 Mio liberes, bilan affiche. Total des deux passages : **~54,8 Gio**.
+- Observation pour la 0.2 : les caches se reproposent des qu'on s'en sert (cargo registry
+  re-rempli par la compilation de 37 s, pip 31 M, npm 46 M) — comportement classique d'un
+  nettoyeur, mais discutable pour un developpeur actif ; piste : ne pas proposer un cache
+  touche depuis N jours (le mecanisme « fenetre propre aux regles safe » le permet
+  desormais en une ligne de TOML).
+- Fait par Claude : version 0.1.1 (Cargo.toml, binaires), CHANGELOG date, README (statut,
+  noms de paquets), note de version `00_cadrage/release_v0.1.1_notes.md`. Commit 19.
+- Reste : `packaging/build.sh` (constater `SHA256SUMS` propre), tag `v0.1.1`, push et
+  release sur accord d'Alexandre ; puis texte de presentation.
+
 ## 2026-10-16, premier nettoyage reel : 54,1 Gio ; script resilient ; residus
 
 - Alexandre a lance le script `safe` : bloc utilisateur complet (Docker build cache

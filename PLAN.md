@@ -208,5 +208,6 @@ D5. **Tests** : options de montage et jour de lecture massive injectables dans
       defauts corriges avant execution), execute : **54,1 Gio liberes** (57,5 annonces,
       2,4 restants) ; arret sur verrou apt → script rendu resilient ; residus < 1 Mio
       non proposes. Suite (13 snaps, apt, /var/crash) a lancer avec le script regenere
-- [ ] CHANGELOG 0.1.1, tag, release (push et release sur accord)
+- [ ] CHANGELOG 0.1.1 ecrit et date, version 0.1.1 dans Cargo.toml, note de version prete
+      (`00_cadrage/release_v0.1.1_notes.md`) ; reste : paquets, tag, push, release (accord)
 - [ ] Texte de presentation (r/rust, r/linux, Show HN) — apres la release

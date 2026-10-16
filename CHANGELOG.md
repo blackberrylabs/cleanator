@@ -3,10 +3,10 @@
 All notable changes to Cleanator. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versions follow [Semantic Versioning](https://semver.org/).
 
-## [0.1.1] — unreleased
+## [0.1.1] — 2026-10-16
 
-Lessons from the first real cleanup (a 595 GB home, 54 GiB freed) and from the first
-readers.
+Lessons from the first real cleanup — a 595 GB home, 54.8 GiB freed in two passes — and
+from the first day in the open.
 
 ### Fixed
 
@@ -95,5 +95,5 @@ deletes anything.**
 - The `.rpm` is built but has not been installed on a Fedora machine yet.
 - No duplicate-file detection yet.
 
-[0.1.1]: https://github.com/blackberrylabs/cleanator/compare/v0.1.0...main
+[0.1.1]: https://github.com/blackberrylabs/cleanator/releases/tag/v0.1.1
 [0.1.0]: https://github.com/blackberrylabs/cleanator/releases/tag/v0.1.0
