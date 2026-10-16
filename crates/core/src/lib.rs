@@ -4,6 +4,7 @@
 //! - **R1** this crate never deletes anything: it scans, classifies and writes a script;
 //! - **R2** what no rule recognises is `never`;
 //! - **R10 bis** only metadata is read (names, sizes, dates, inodes), never file contents.
+#![forbid(unsafe_code)]
 
 pub mod classify;
 pub mod exec;

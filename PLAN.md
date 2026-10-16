@@ -138,8 +138,12 @@ testes sur la machine de dev.
 Resultat visible attendu : README anglais avec captures, section « why not Baobab / ncdu /
 BleachBit » verifiee, `CONTRIBUTING.md`, `docs/rules.md`.
 
-- [ ] Reverifier les outils existants cites au BRIEF §4, plus `cleanr` (crates.io, v0.17,
-      outil de nettoyage en Rust) et `clean-rs`
-- [ ] Captures d'ecran reelles (treemap, assistants, script)
+- [x] Outils existants reverifies le 2026-10-16 : BleachBit 4.4.2 (paquet Ubuntu 24.04,
+      75 nettoyeurs listes depuis le .deb, aucun pour VS Code/Docker/pip/npm/conda/uv/
+      Ollama/HF), kondo 0.9 (artefacts de build, « rm -rf with a prompt »), cleanr 0.1.0
+      (TUI caches dev, sans README), clean-rs (outil de clean de projets Rust/Go/Maven/
+      Gradle, hors sujet) — tableau dans le README
+- [x] Captures d'ecran reelles en anglais (explorateur clair et sombre, assistants,
+      recommandation depliee), recadrees sur la fenetre, `docs/screenshots/` — 2026-10-16
 - [ ] README, CONTRIBUTING, docs
 - [ ] Partage (a decider : Reddit r/linux, Hacker News, LinkedIn) — accord d'Alexandre

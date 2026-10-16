@@ -1,5 +1,6 @@
 //! Cleanator desktop app (iced). One window, three gestures: look, tick, copy the script.
 //! Runs the core in a background thread; never deletes anything (R1).
+#![forbid(unsafe_code)]
 
 mod i18n;
 mod treemap;

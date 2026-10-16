@@ -1,5 +1,6 @@
 //! `cleanator-cli`: the core without a window. Scans, classifies, writes the script.
 //! It never deletes anything (R1): `script` only prints or saves a file for you to read.
+#![forbid(unsafe_code)]
 
 use std::path::{Path, PathBuf};
 

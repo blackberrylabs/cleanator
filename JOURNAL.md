@@ -7,6 +7,21 @@ titre, ce qui a ete decide, par qui, ce qui a ete ecarte, et la preuve (fichier,
 
 ---
 
+## 2026-10-16, README final : captures, comparatif verifie, section Rust
+
+- Alexandre : quatre captures en anglais (« rien a cacher ») ; « on ne devrait pas parler
+  un peu plus du Rust ? C'est un argument » → section « Built in Rust » avec des faits
+  verifiables (binaire de 16 Mo lie a la seule libc, 636 Go en ~2 s, `forbid(unsafe_code)`
+  ajoute dans les trois crates pour que l'affirmation soit garantie par le compilateur,
+  regles embarquees validees par les tests).
+- Comparatif « why another cleaner » verifie piece par piece : BleachBit 4.4.2 telecharge
+  (paquet Ubuntu 24.04) et ses 75 nettoyeurs listes ; kondo et cleanr lus depuis
+  crates.io ; clean-rs ecarte (outil de clean de projets). Tableau dans le README avec les
+  versions verifiees, pour que le lecteur puisse controler.
+- Captures recadrees sur la fenetre (sans dock ni barre Ubuntu), 160–180 Ko chacune,
+  `docs/screenshots/`. Commit 14.
+- Etape 5 quasi close : reste le push de ces commits (12 a 14) sur accord d'Alexandre.
+
 ## 2026-10-16, release 0.1.0 publiee
 
 - Alexandre : commit 12, paquets reconstruits, tag `v0.1.0` pousse, release creee sur
