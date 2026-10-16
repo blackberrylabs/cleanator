@@ -7,6 +7,26 @@ titre, ce qui a ete decide, par qui, ce qui a ete ecarte, et la preuve (fichier,
 
 ---
 
+## 2026-10-16, .deb installe ; sources des regles toutes lues ; CONTRIBUTING
+
+- Alexandre : « j'ai fait tes commandes, c'est installe. Tu peux continuer. » Capture :
+  Cleanator lance depuis le paquet, icone dans la barre de titre.
+- Fait par Claude, les 10 sources `to-verify` : chaque documentation lue et citee
+  (freedesktop thumbnail spec ; Chromium `user_data_dir.md` pour Chrome/Chromium/Brave +
+  bug Mozilla 1047940 pour le cache Firefox ; man systemd-coredump + wiki Apport ; Vagrant
+  `VAGRANT_HOME` + manuel VirtualBox ; Jan data folder — **le chemin a change**,
+  `~/.local/share/Jan/data/llamacpp/models`, l'ancien `~/jan/models` garde en second ;
+  GPT4All Download Path ; Cline task management ; OpenCode troubleshooting ; tutoriel
+  Python « Compiled Python files »). Les deux regles Claude Desktop (`vm_bundles`,
+  `local-agent-mode-sessions`) n'ont aucune documentation publique : nouveau type de source
+  `observed` (ce qui a ete vu, ou, quand), distingue d'une documentation dans le schema,
+  la CLI (`[observed, not documented]`) et l'app (mention a la place du lien « doc »).
+  Le test exige desormais zero `to-verify`.
+- `CONTRIBUTING.md` : principes, ajouter une regle (source obligatoire), ajouter une
+  langue, code, signaler une mauvaise recommandation.
+- Commit 11. Avant release : adresse de commit, depot GitHub, captures README (anglais),
+  tag v0.1.0 — push et release sur accord d'Alexandre.
+
 ## 2026-10-16, etape 3 close ; paquets .deb, .rpm, AppImage
 
 - Alexandre, capture de Projets en pleine largeur (sombre) : « pour moi, c'est bon, tu

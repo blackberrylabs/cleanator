@@ -68,14 +68,14 @@ requires = "user"
 why = "Disk images of virtual machines and downloaded Vagrant boxes, GBs each."
 regenerate = "A box is re-downloaded; a VM's disk is not."
 cost = "losing the VM's state"
-notes = "Paths by convention; each tool's documentation to be read before release. VMs that are running are excluded by the open-files check."
+notes = "Documented: Vagrant boxes in ~/.vagrant.d (source) and VirtualBox's machine folder, `$HOME/VirtualBox VMs` (VirtualBox manual, ch. 10, read 2026-10-16). By convention: libvirt's session pool ~/.local/share/libvirt/images, GNOME Boxes, Multipass. VMs that are running are excluded by the open-files check."
 [rule.in_use]
 processes = ["qemu", "VBoxHeadless", "VirtualBoxVM", "multipassd"]
 open_files = true
 [rule.source]
-url = "to-verify"
-read_on = 2026-10-15
-quote = ""
+url = "https://developer.hashicorp.com/vagrant/docs/other/environmental-variables"
+read_on = 2026-10-16
+quote = "VAGRANT_HOME [...] By default, this is set to ~/.vagrant.d. The Vagrant home directory is where things such as boxes are stored, so it can actually become quite large on disk."
 
 [[rule]]
 id = "git-reclonable"

@@ -1149,6 +1149,12 @@ impl App {
                         .padding(2)
                         .on_press(Message::OpenDocs(r.source_url.clone())),
                 );
+            } else if r.source_url == "observed" {
+                links = links.push(
+                    text(self.t("detail.observed"))
+                        .size(11)
+                        .style(text::secondary),
+                );
             }
             details = details.push(links);
             col = col.push(

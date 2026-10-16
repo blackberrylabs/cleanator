@@ -93,13 +93,13 @@ kind = "none"
 why = "Disk images of the sandbox Claude Desktop runs local tasks in (rootfs.img, sessiondata.img, ~20 GB). Rewritten every day the app is used: in use by definition. Shown in the treemap so the user knows where 20 GB went."
 regenerate = "—"
 cost = "—"
-notes = "Observed on the dev machine on 2026-10-15; no public documentation of this layout found yet (source to add or rule to adjust before release)."
+notes = "No public documentation describes this layout; the rule rests on observation (see source). Contributions welcome if Anthropic documents it."
 [rule.in_use]
 processes = ["claude-desktop", "Claude"]
 [rule.source]
-url = "to-verify"
-read_on = 2026-10-15
-quote = ""
+url = "observed"
+read_on = 2026-10-16
+quote = "Observed on Ubuntu 24.04 with Claude Desktop (2026-10-15 and 2026-10-16): ~/.config/Claude/vm_bundles/ holds rootfs.img and sessiondata.img, about 20 GB, both modified on every day the app runs local tasks."
 
 [[rule]]
 id = "claude-desktop-sessions"
@@ -120,13 +120,13 @@ dormancy_measure = "mtime"
 why = "Audit logs of local-agent (Cowork) sessions run from Claude Desktop — a long session leaves a file of about 1 GB — and the `outputs/` folders those sessions wrote files into (seen: 3.4 GB and 1.7 GB on the dev machine)."
 regenerate = "Not regenerable: an `outputs/` folder may hold files a session produced for you — look inside before trashing; audit logs are needed only to review what a past session did."
 cost = "none for the app"
-notes = "Observed on the dev machine (two files of 1.0 and 1.2 GB); layout not documented publicly — to verify before release."
+notes = "No public documentation describes this layout; the rule rests on observation (see source)."
 [rule.in_use]
 processes = ["claude-desktop", "Claude"]
 [rule.source]
-url = "to-verify"
-read_on = 2026-10-15
-quote = ""
+url = "observed"
+read_on = 2026-10-16
+quote = "Observed on Ubuntu 24.04 with Claude Desktop (2026-10-15 and 2026-10-16): ~/.config/Claude/local-agent-mode-sessions/<account>/<session>/ holds an audit.jsonl per session (two of 1.0 and 1.2 GB seen) and an outputs/ folder with the files the session produced (3.4 GB and 1.7 GB seen)."
 
 # -------------------------------------------------------------------- Codex
 
@@ -244,13 +244,13 @@ dormancy_measure = "mtime"
 why = "Each agent task keeps its conversation and file checkpoints: a few MB to several GB per task."
 regenerate = "Not regenerable; the task can no longer be reopened."
 cost = "losing that task's history"
-notes = "Extension ids by convention; each extension's documentation to be read before release."
+notes = "Cline's documentation confirms a dedicated local directory per task but gives no path; the path follows VS Code's globalStorage convention (~/.config/<editor>/User/globalStorage/<publisher.extension>/) with the extension ids of Cline, Roo Code and Kilo Code as published on the marketplace."
 [rule.in_use]
 processes = ["code", "cursor", "windsurf"]
 [rule.source]
-url = "to-verify"
-read_on = 2026-10-15
-quote = ""
+url = "https://docs.cline.bot/core-workflows/task-management"
+read_on = 2026-10-16
+quote = "Every task you work on is saved automatically to your local machine. [Each task] has a unique identifier and dedicated storage directory [and] contains the full conversation history."
 
 [[rule]]
 id = "vscode-family-config"
@@ -289,13 +289,13 @@ requires = "user"
 why = "Backup copies of OpenCode's session database (`opencode.db.bak`), left next to the live database after upgrades."
 regenerate = "Not regenerable, but the live database is untouched."
 cost = "none unless the live database is corrupted"
-notes = "Live `opencode.db` is never proposed. Paths by convention — OpenCode documentation to be read before release."
+notes = "Live `opencode.db` is never proposed. The data directory is documented; the `.bak` copies were observed on the dev machine (2026-10-15) after upgrades."
 [rule.in_use]
 processes = ["opencode"]
 [rule.source]
-url = "to-verify"
-read_on = 2026-10-15
-quote = ""
+url = "https://opencode.ai/docs/troubleshooting"
+read_on = 2026-10-16
+quote = "opencode stores session data and other application data on disk at: ~/.local/share/opencode/ [macOS/Linux]. This directory contains: auth.json [...] project/ - Project-specific data like session and message data"
 
 [[rule]]
 id = "assistant-caches-misc"

@@ -70,6 +70,19 @@ ignore dormancy unless they set one (caches of a session that just ended, for in
 `dormancy_measure = "atime"` uses the last access (for a model: the last time it was
 loaded), `"mtime"` the last modification, `"atime:bin/python"` a specific file's access.
 
+## Sources
+
+Every rule cites where its knowledge comes from. `source.url` is the documentation page
+that was read, `read_on` the date, `quote` the sentence that supports the rule (the UI
+shows the link as "docs"). Two special values:
+
+- `to-verify` — the rule was written from experience and its documentation has not been
+  read yet. Allowed while developing, counted by `cleanator-cli rules`; a release ships
+  with none.
+- `observed` — no public documentation describes this layout. `quote` then states what
+  was seen, on what system and when, so a reader can tell observation from documentation
+  and a contributor can replace it with a reference when one appears.
+
 ## One owner per path
 
 Rules run in file order (files sorted by name), the catch-all rule (`extensions = ["*"]`)

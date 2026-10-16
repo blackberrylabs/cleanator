@@ -52,7 +52,7 @@ category = "model"
 level = "review"
 [rule.detect]
 kind = "path"
-paths = ["~/jan/models", "~/.local/share/nomic.ai/GPT4All", "~/.config/Msty/models", "~/.ollama-webui"]
+paths = ["~/.local/share/Jan/data/llamacpp/models", "~/jan/models", "~/.local/share/nomic.ai/GPT4All", "~/.config/Msty/models", "~/.ollama-webui"]
 item_glob = "*"
 [rule.cleanup]
 kind = "trash"
@@ -64,11 +64,11 @@ dormancy_measure = "atime"
 why = "Models downloaded inside desktop chat apps, each in its own folder."
 regenerate = "Downloaded again from the app."
 cost = "minutes to an hour, GBs of network"
-notes = "Paths by convention; each app's documentation to be read before release. Open WebUI in Docker keeps models in the `ollama` volume (docker rules)."
+notes = "Documented: Jan (source; ~/jan/models is the folder of older versions) and GPT4All, whose Linux default Download Path is /home/{username}/.local/share/nomic.ai/GPT4All (docs.gpt4all.io, settings, read 2026-10-16). By convention: Msty, Open WebUI outside Docker. Open WebUI in Docker keeps models in the `ollama` volume (docker rules)."
 [rule.in_use]
 processes = ["jan", "gpt4all", "msty"]
 open_files = true
 [rule.source]
-url = "to-verify"
-read_on = 2026-10-15
-quote = ""
+url = "https://docs.jan.ai/desktop/data-folder"
+read_on = 2026-10-16
+quote = "Linux (default - resolves via XDG_DATA_HOME): ~/.local/share/Jan/data [...] GGUF models: ~/.local/share/Jan/data/llamacpp/models/"

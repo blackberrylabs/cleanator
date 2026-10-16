@@ -47,6 +47,7 @@
   "detail.regenerate": "regenerate",
   "detail.cost": "cost",
   "detail.rule": "rule",
+  "detail.observed": "observed on a real machine, not documented by the vendor",
   "detail.docs": "docs ↗",
   "tabs.explorer": "Explorer",
   "tabs.assistants": "AI assistants",

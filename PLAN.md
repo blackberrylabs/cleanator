@@ -118,8 +118,15 @@ testes sur la machine de dev.
       (cargo-generate-rpm), AppImage (appimagetool) ; metadonnees dans
       `crates/app/Cargo.toml` ; `.deb` installe et teste dans le cloud (Ubuntu 24.04) —
       2026-10-16
-- [ ] Test d'installation des trois sur la machine de dev (le `.deb` au moins ; `.rpm`
-      verifie par `rpm -qpi` si `rpm` est present)
+- [x] Test d'installation du `.deb` sur la machine de dev : installe, icone en barre de
+      titre, lancement depuis `/usr/bin` (capture du 2026-10-16 09:40) — `.rpm` non teste
+      (pas de machine Fedora), AppImage extraite et verifiee dans le cloud
+- [x] Sources des regles : les 10 `to-verify` lues et citees (freedesktop, Chromium, man
+      systemd-coredump, Vagrant, Jan, GPT4All, Cline, OpenCode, Python) ; schema `observed`
+      pour les deux regles Claude Desktop sans documentation publique ; test
+      « zero to-verify » verrouille — 2026-10-16
+- [ ] Adresse de commit a corriger (placeholder `alexandre@blackberrylabs.dev`) — question
+      posee a Alexandre
 - [ ] Depot `blackberrylabs/cleanator` (LICENSE MIT, README minimal) — push sur accord
 - [ ] Tag `v0.1.0`, release, note de version
 

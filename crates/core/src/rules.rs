@@ -201,9 +201,18 @@ impl Rule {
             .map(|c| c.dormancy_days.unwrap_or(default_days))
     }
 
-    /// Whether the rule's source still needs to be read before a release.
+    /// Whether the rule's source still needs to be read before a release. `observed`
+    /// sources (layout seen on a real machine, no public documentation) are complete as
+    /// long as they say what was seen.
     pub fn source_to_verify(&self) -> bool {
-        self.source.url == "to-verify" || self.source.quote.starts_with('(')
+        self.source.url == "to-verify"
+            || self.source.quote.starts_with('(')
+            || (self.source.url == "observed" && self.source.quote.trim().is_empty())
+    }
+
+    /// The source documents the layout only by observation, not by documentation.
+    pub fn source_is_observation(&self) -> bool {
+        self.source.url == "observed"
     }
 
     /// `open_files` check: explicit value, else true for `review` rules and for any rule
@@ -420,7 +429,14 @@ impl RuleSet {
                 return Err(invalid("explain needs why, regenerate and cost".into()));
             }
             if r.source.url.trim().is_empty() {
-                return Err(invalid("source needs a url (or `to-verify`)".into()));
+                return Err(invalid(
+                    "source needs a url (or `to-verify`, or `observed` with a quote)".into(),
+                ));
+            }
+            if r.source.url == "observed" && r.source.quote.trim().is_empty() {
+                return Err(invalid(
+                    "an `observed` source must say what was seen, where and when".into(),
+                ));
             }
         }
         Ok(())
@@ -455,10 +471,15 @@ mod tests {
         );
         assert!(set.get("pip-cache").is_some());
         assert!(set.get("docker-unused-images").unwrap().level == Level::Review);
-        let to_verify = set.rules.iter().filter(|r| r.source_to_verify()).count();
+        let to_verify: Vec<_> = set
+            .rules
+            .iter()
+            .filter(|r| r.source_to_verify())
+            .map(|r| r.id.as_str())
+            .collect();
         assert!(
-            to_verify <= 12,
-            "to-verify sources must not grow silently: {to_verify}"
+            to_verify.is_empty(),
+            "every rule cites a read source since 2026-10-16; still to verify: {to_verify:?}"
         );
     }
 

@@ -297,6 +297,8 @@ fn main() -> Result<()> {
                         r.name,
                         if r.source_to_verify() {
                             "  [source to verify]"
+                        } else if r.source_is_observation() {
+                            "  [observed, not documented]"
                         } else {
                             ""
                         }
