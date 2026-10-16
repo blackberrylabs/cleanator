@@ -7,6 +7,35 @@ titre, ce qui a ete decide, par qui, ce qui a ete ecarte, et la preuve (fichier,
 
 ---
 
+## 2026-10-16 (matin), premiere passe reelle et correction du classifieur
+
+- Fait par Alexandre : commit 2, compilation en 12 s sur la machine, scan du home.
+- Verifie : scanner **egal a `du -sx` a l'octet pres** sur le vrai disque — 636 503 629 824
+  octets des deux cotes, 2,59 M de fichiers, 242 000 dossiers, 265 128 liens physiques
+  comptes une fois (uv, pnpm), 2,1 s. Meme unique dossier illisible (`pgdata` de Dify).
+- Premiere recommandation reelle (`00_cadrage/2026-10-16_recommend_reel.txt`, 1 189
+  lignes) : 54,7 Go safe, 303 Go review, 8,3 Go en usage, 197 Go never — chiffres gonfles
+  par les defauts ci-dessous. Juste du premier coup : Docker (18 Go tensorcash, 3
+  poa-banc, 15,5 Go de cache de build, image <none>), 15 revisions snap, pip 13 Go,
+  corbeille 6,3 Go, tracker3 3,5 Go, `target/` d'Eliot en review (projet actif), doublon
+  bge-reranker, depots re-clonables, et une troisieme copie du Qwen 27B (`dbirks/`).
+- Cinq defauts, corriges par Claude (commit 3, a faire par Alexandre) :
+  1. un chemin classe par plusieurs regles et le filet `large-files-unclassified` qui
+     relistait tout → **un proprietaire par chemin** : ordre des fichiers, filet en
+     dernier, le premier qui classe garde (`docs/rules.md`, « One owner per path ») ;
+  2. « node est en cours d'execution » bloquait 89 elements → la verification par nom de
+     processus ne s'applique plus qu'aux elements sans chemin ; les autres passent par les
+     fichiers ouverts, precis ;
+  3. `training-outputs` attrapait les `outputs/` des sessions Cowork → exclus des
+     dossiers caches, et la regle Claude Desktop les couvre avec le bon message ;
+  4. trop loin dans les projets : `build/` retire (donnee possible, R2), `_backups` dans un
+     projet ignores (`skip_in_project`), `dist`/`node_modules` d'extensions VS Code et de
+     `.npm/_npx` exclus ;
+  5. modeles sans dormance → 60 jours sans acces (`dormancy_measure = "atime"`) sur
+     toutes les regles de modeles (Q3 du BRIEF).
+- Etat : correctifs copies sur le PC (somme de controle verifiee) ; commit 3 et seconde
+  passe reelle a lancer par Alexandre.
+
 ## 2026-10-16 (nuit), etape 2 : le coeur existe
 
 - Alexandre : « go » pour une nuit de code (PC laisse allume). Decisions prises sans lui,

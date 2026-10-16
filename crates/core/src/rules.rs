@@ -109,6 +109,11 @@ pub struct Detect {
     /// `probe = "git-status"`: where to look.
     #[serde(default)]
     pub roots: Vec<String>,
+    /// `pattern`: skip matches that sit inside a project (an ancestor with `.git`,
+    /// `package.json`, `pyproject.toml`, `Cargo.toml`): a backup folder inside a repository
+    /// is the repository's business.
+    #[serde(default)]
+    pub skip_in_project: bool,
 }
 
 impl Detect {
@@ -201,12 +206,23 @@ impl Rule {
         self.source.url == "to-verify" || self.source.quote.starts_with('(')
     }
 
-    /// `open_files` check: explicit value, else true for `review` rules.
+    /// `open_files` check: explicit value, else true for `review` rules and for any rule
+    /// that names processes (the precise check replaces the coarse "is X running" one
+    /// whenever the item has a path).
     pub fn checks_open_files(&self) -> bool {
-        self.in_use
-            .as_ref()
-            .and_then(|u| u.open_files)
-            .unwrap_or(self.level == Level::Review)
+        self.in_use.as_ref().and_then(|u| u.open_files).unwrap_or(
+            self.level == Level::Review
+                || self
+                    .in_use
+                    .as_ref()
+                    .is_some_and(|u| !u.processes.is_empty()),
+        )
+    }
+
+    /// The catch-all signature rule (`extensions = ["*"]`) runs after every other rule, so
+    /// it only lists what nothing else classified.
+    pub fn is_catch_all(&self) -> bool {
+        self.detect.kind == DetectKind::Signature && self.detect.extensions.iter().any(|e| e == "*")
     }
 
     /// `bind_mounts` check: explicit value, else true for `review` rules.

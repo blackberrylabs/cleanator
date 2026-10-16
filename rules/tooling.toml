@@ -57,6 +57,9 @@ item_glob = "*"
 [rule.cleanup]
 kind = "trash"
 requires = "user"
+[rule.conditions]
+dormancy_days = 60
+dormancy_measure = "atime"
 [rule.explain]
 why = "Models downloaded inside desktop chat apps, each in its own folder."
 regenerate = "Downloaded again from the app."

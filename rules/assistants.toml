@@ -108,7 +108,7 @@ category = "assistant-history"
 level = "review"
 [rule.detect]
 kind = "pattern"
-glob = "~/.config/Claude/local-agent-mode-sessions/**/audit.jsonl"
+glob = ["~/.config/Claude/local-agent-mode-sessions/**/audit.jsonl", "~/.config/Claude/local-agent-mode-sessions/**/outputs"]
 group_by = "parent:2"
 [rule.cleanup]
 kind = "trash"
@@ -117,8 +117,8 @@ requires = "user"
 dormancy_days = 60
 dormancy_measure = "mtime"
 [rule.explain]
-why = "Audit logs of local-agent sessions run from Claude Desktop; a long session leaves a file of about 1 GB."
-regenerate = "Not regenerable; needed only to review what a past session did."
+why = "Audit logs of local-agent (Cowork) sessions run from Claude Desktop — a long session leaves a file of about 1 GB — and the `outputs/` folders those sessions wrote files into (seen: 3.4 GB and 1.7 GB on the dev machine)."
+regenerate = "Not regenerable: an `outputs/` folder may hold files a session produced for you — look inside before trashing; audit logs are needed only to review what a past session did."
 cost = "none for the app"
 notes = "Observed on the dev machine (two files of 1.0 and 1.2 GB); layout not documented publicly — to verify before release."
 [rule.in_use]

@@ -12,7 +12,7 @@ kind = "pattern"
 glob = ["**/checkpoints", "**/checkpoint-*", "**/runs", "**/wandb", "**/outputs", "**/lightning_logs", "**/mlruns", "**/tensorboard", "**/samples"]
 anchor = "project"
 min_size = "200MB"
-exclude_under = ["node_modules/", ".venv/", "site-packages/", "docker/volumes"]
+exclude_under = ["node_modules/", ".venv/", "site-packages/", "docker/volumes", ".config/", ".local/", ".cache/", ".claude/"]
 [rule.cleanup]
 kind = "trash"
 requires = "user"

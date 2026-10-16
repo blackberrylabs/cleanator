@@ -17,6 +17,9 @@ kind = "command"
 command = "ollama rm {name}"
 fallback = "none"
 requires = "user"
+[rule.conditions]
+dormancy_days = 60
+dormancy_measure = "atime"
 [rule.explain]
 why = "Models pulled with `ollama pull`/`ollama run`, stored as shared blobs under manifests. Listed by name (`ollama ls`) with their size and modification date, never by blob hash."
 regenerate = "`ollama pull {name}` downloads the model again."
@@ -45,6 +48,9 @@ kind = "command"
 command = "hf cache rm model/{org}/{name} --yes"
 fallback = "trash"
 requires = "user"
+[rule.conditions]
+dormancy_days = 60
+dormancy_measure = "atime"
 [rule.explain]
 why = "Every model downloaded by transformers, diffusers, vLLM, sentence-transformers or `hf download` lands here, one `models--org--name` directory with blobs, refs and snapshots (symlinks to blobs)."
 regenerate = "The next `from_pretrained` or `hf download` fetches it again."
@@ -73,6 +79,9 @@ kind = "command"
 command = "hf cache rm dataset/{org}/{name} --yes"
 fallback = "trash"
 requires = "user"
+[rule.conditions]
+dormancy_days = 60
+dormancy_measure = "atime"
 [rule.explain]
 why = "Datasets downloaded through the Hub, same layout as models."
 regenerate = "Re-downloaded on next use."
@@ -93,6 +102,9 @@ glob = "~/.cache/huggingface/models--*"
 [rule.cleanup]
 kind = "trash"
 requires = "user"
+[rule.conditions]
+dormancy_days = 60
+dormancy_measure = "atime"
 [rule.explain]
 why = "`models--*` directories directly under ~/.cache/huggingface (not under hub/) come from an older library version or a tool that wrote there; today's cache lives in hub/. Often a duplicate of the same model in hub/."
 regenerate = "Re-downloaded on next use if any tool still points there."
@@ -134,6 +146,9 @@ paths = ["~/.lmstudio/models", "~/.cache/lm-studio/models"]
 [rule.cleanup]
 kind = "trash"
 requires = "user"
+[rule.conditions]
+dormancy_days = 60
+dormancy_measure = "atime"
 [rule.explain]
 why = "GGUF models downloaded inside LM Studio, one directory per publisher/model."
 regenerate = "Downloaded again from LM Studio's model browser."
@@ -160,6 +175,9 @@ exclude_managed = true
 [rule.cleanup]
 kind = "trash"
 requires = "user"
+[rule.conditions]
+dormancy_days = 60
+dormancy_measure = "atime"
 [rule.explain]
 why = "Model weights that live in a project folder, a tool's models/ directory (ComfyUI, ai-toolkit, Stable Diffusion) or a hand-made models/ folder. Cleanator cannot know whether they were downloaded or trained: it shows them by name, size and last access, grouped by their parent directory."
 regenerate = "Downloaded files can be fetched again; a fine-tune or a merge you made yourself cannot."

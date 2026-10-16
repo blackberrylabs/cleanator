@@ -94,6 +94,17 @@ impl Activity {
         a
     }
 
+    /// An `Activity` with these open files and these process names (tests).
+    #[doc(hidden)]
+    pub fn for_test_with_processes(open_files: Vec<PathBuf>, processes: Vec<String>) -> Activity {
+        let mut a = Activity::for_test(open_files);
+        a.processes = processes
+            .into_iter()
+            .map(|p| p.to_ascii_lowercase())
+            .collect();
+        a
+    }
+
     fn insert_open(&mut self, path: PathBuf) {
         let path = PathBuf::from(path.to_string_lossy().trim_end_matches(" (deleted)"));
         let mut p: Option<&Path> = Some(&path);

@@ -12,6 +12,7 @@ kind = "pattern"
 glob = ["~/**/*_backup*", "~/**/*_BACKUP_*", "~/**/*.bak", "~/**/*-backup-*", "~/**/*_sauvegarde*", "~/.config/*_backup*"]
 min_size = "100MB"
 exclude_under = ["node_modules/", ".git/", "docker/volumes"]
+skip_in_project = true
 [rule.cleanup]
 kind = "trash"
 requires = "user"
@@ -19,7 +20,7 @@ requires = "user"
 why = "A directory or file whose name says it is a backup. If the original still exists next to it and is newer, the backup is a snapshot of the past."
 regenerate = "Not regenerable: it is the copy. The original, if still present, is untouched."
 cost = "losing the ability to go back to that date"
-notes = "Shown with its date and, when found, the original it copies (same name without the backup suffix) and whether the original is newer. Matching by name only: Cleanator never looks inside."
+notes = "Shown with its date and, when found, the original it copies (same name without the backup suffix) and whether the original is newer. Matching by name only: Cleanator never looks inside. Backups inside a project (git repository, package.json, pyproject) are the project's business and are not listed."
 [rule.source]
 url = "project brief, inventory of 2026-10-15"
 read_on = 2026-10-15

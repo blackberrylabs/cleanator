@@ -67,6 +67,16 @@ dormancy_measure = "atime:bin/python"  # mtime (default) | atime:<relative file>
 
 Items younger than the dormancy window are not proposed by `review` rules; `safe` rules
 ignore dormancy unless they set one (caches of a session that just ended, for instance).
+`dormancy_measure = "atime"` uses the last access (for a model: the last time it was
+loaded), `"mtime"` the last modification, `"atime:bin/python"` a specific file's access.
+
+## One owner per path
+
+Rules run in file order (files sorted by name), the catch-all rule (`extensions = ["*"]`)
+last. **The first rule to classify a path keeps it**: a later rule skips that path and
+anything below it. A model directory claimed by the Hugging Face probe is not re-listed by
+the loose-model rule; a repository claimed as re-clonable is not re-listed piece by piece;
+the catch-all only lists what nothing else classified.
 
 ## Detection kinds
 
@@ -80,7 +90,8 @@ ignore dormancy unless they set one (caches of a session that just ended, for in
   attributed to its parent project (`anchor = "project"`: nearest ancestor with `.git`,
   `package.json`, `pyproject.toml`, `Cargo.toml`). `requires_sibling` restricts a match to
   directories whose parent holds one of the listed files (`dist/` only next to a
-  `package.json`). `exclude_under` skips matches below the listed path fragments. Project
+  `package.json`). `exclude_under` skips matches below the listed path fragments;
+  `skip_in_project = true` skips matches that sit inside a project. Project
   activity = newest mtime outside build dirs. `group_by` chooses how items are grouped in
   the UI (`project`, `app`, `parent:N`).
 - **`probe`** — the item is listed by a tool, not by walking the disk (`probe = "docker"`,

@@ -14,7 +14,7 @@ kind = "pattern"
 glob = "**/node_modules"
 anchor = "project"
 requires_sibling = ["package.json"]
-exclude_under = ["docker/volumes", "node_modules/"]
+exclude_under = ["docker/volumes", "node_modules/", ".npm/", ".vscode/extensions", ".cursor/extensions", ".windsurf/extensions", ".cache/"]
 [rule.cleanup]
 kind = "rm"
 requires = "user"
@@ -74,7 +74,7 @@ kind = "pattern"
 glob = ["**/.next", "**/dist", "**/.turbo", "**/.open-next", "**/.nuxt", "**/.svelte-kit", "**/.parcel-cache", "**/.astro", "**/.vite", "**/.cache"]
 anchor = "project"
 requires_sibling = ["package.json"]
-exclude_under = ["node_modules/", "docker/volumes"]
+exclude_under = ["node_modules/", "docker/volumes", ".npm/", ".vscode/extensions", ".cursor/extensions", ".windsurf/extensions", ".cache/"]
 [rule.cleanup]
 kind = "rm"
 requires = "user"
@@ -95,14 +95,13 @@ quote = "Geoclimat/06_site/dist 2.9 GB, Openorhold .next 373 MB"
 
 [[rule]]
 id = "python-caches-in-projects"
-name = "Python caches in projects (__pycache__, .pytest_cache, .mypy_cache, .ruff_cache, build/)"
+name = "Python caches in projects (__pycache__, .pytest_cache, .mypy_cache, .ruff_cache)"
 category = "build"
 level = "safe"
 [rule.detect]
 kind = "pattern"
-glob = ["**/__pycache__", "**/.pytest_cache", "**/.mypy_cache", "**/.ruff_cache", "**/.hypothesis", "**/build"]
+glob = ["**/__pycache__", "**/.pytest_cache", "**/.mypy_cache", "**/.ruff_cache", "**/.hypothesis"]
 anchor = "project"
-requires_sibling = ["pyproject.toml", "setup.py", "requirements.txt"]
 exclude_under = [".venv/", "venv/", "site-packages/", "docker/volumes"]
 [rule.cleanup]
 kind = "rm"
@@ -114,7 +113,7 @@ active_project_level = "safe"
 why = "Bytecode and tool caches Python and its linters/testers write next to the code."
 regenerate = "Recreated on the next run."
 cost = "none"
-notes = "`build/` only next to a pyproject.toml/setup.py (packaging output)."
+notes = "`build/` is deliberately not matched: next to a pyproject it may be packaging output, elsewhere it is often data (seen on the dev machine: a 485 MB `build/` of a legal corpus). Unknown is `never` (R2)."
 [rule.source]
 url = "https://docs.python.org/3/library/venv.html"
 read_on = 2026-10-15

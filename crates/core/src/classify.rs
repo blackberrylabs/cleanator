@@ -151,7 +151,12 @@ pub fn classify(scan: &Scan, rules: &RuleSet, env: &Env, opts: &ClassifyOptions)
     let mut probe_summaries = Vec::new();
     let mut rule_notes = Vec::new();
 
-    for rule in &rules.rules {
+    // File order, catch-all rules last; the first rule to classify a path keeps it.
+    let mut ordered: Vec<&Rule> = rules.rules.iter().collect();
+    ordered.sort_by_key(|r| r.is_catch_all());
+    let mut claimed: Vec<PathBuf> = Vec::new();
+
+    for rule in ordered {
         let (candidates, probe) = match rule.detect.kind {
             DetectKind::Path => (path_candidates(rule, scan, env, &ctx), None),
             DetectKind::Pattern => (pattern_candidates(rule, scan, env), None),
@@ -188,14 +193,22 @@ pub fn classify(scan: &Scan, rules: &RuleSet, env: &Env, opts: &ClassifyOptions)
             continue;
         }
         let mut seen_keys = HashSet::new();
+        let mut newly_claimed: Vec<PathBuf> = Vec::new();
         for cand in candidates {
             if !seen_keys.insert(cand.key.clone()) {
                 continue;
+            }
+            if let Some(p) = &cand.path {
+                if claimed.iter().any(|c| p == c || p.starts_with(c)) {
+                    continue;
+                }
+                newly_claimed.push(p.clone());
             }
             if let Some(rec) = finish(rule, cand, scan, &activity, opts, sudo_for_docker) {
                 recommendations.push(rec);
             }
         }
+        claimed.extend(newly_claimed);
     }
 
     recommendations.sort_by(|a, b| {
@@ -425,6 +438,7 @@ fn pattern_candidates(rule: &Rule, scan: &Scan, env: &Env) -> Vec<Candidate> {
             && node.size >= min_size
             && !excluded(&node.path, &d.exclude_under)
             && sibling_ok(d, ancestors)
+            && !(d.skip_in_project && project_of(ancestors).is_some())
             && !matched_dirs.iter().any(|m| node.path.starts_with(m))
         {
             matched_dirs.push(node.path.clone());
@@ -459,6 +473,12 @@ fn pattern_candidates(rule: &Rule, scan: &Scan, env: &Env) -> Vec<Candidate> {
                     continue;
                 }
                 if matched_dirs.iter().any(|m| f.path.starts_with(m)) {
+                    continue;
+                }
+                if d.skip_in_project
+                    && (project_of(ancestors).is_some()
+                        || PROJECT_MARKERS.iter().any(|m| node.has_marker(m)))
+                {
                     continue;
                 }
                 let project = if d.anchor.as_deref() == Some("project") {
@@ -652,6 +672,15 @@ fn finish(
                     cand.last_used = Some(node.newest_mtime);
                 }
             }
+        } else if measure == "atime" {
+            if let Some(p) = &cand.path {
+                if let Some(node) = scan.tree.find(p) {
+                    cand.last_used = Some(node.newest_atime);
+                } else if let Ok(m) = std::fs::metadata(p) {
+                    use std::os::unix::fs::MetadataExt;
+                    cand.last_used = Some(m.atime());
+                }
+            }
         }
     }
 
@@ -700,12 +729,9 @@ fn finish(
         }
         if in_use.is_none() {
             if let Some(u) = &rule.in_use {
-                let coarse = !u.processes.is_empty()
-                    && u.open_files != Some(true)
-                    && u.probe.is_none()
-                    && rule.level == Level::Safe
-                    && cand.path.is_some()
-                    && !rule.checks_open_files();
+                // Without a path there is nothing precise to check: fall back to
+                // "is one of these processes running".
+                let coarse = !u.processes.is_empty() && u.probe.is_none() && cand.path.is_none();
                 if coarse {
                     if let Some(name) = activity.process_running(&u.processes) {
                         in_use = Some(format!("`{name}` is running"));
@@ -914,9 +940,22 @@ mod tests {
         write(&h.join("venvs/fresh/pyvenv.cfg"), 10);
         write(&h.join("venvs/fresh/bin/python"), 1_500_000);
         write(&h.join("comfy/models/qwen.safetensors"), 101 * 1024 * 1024);
+        write(&h.join("comfy/models/fresh.safetensors"), 101 * 1024 * 1024);
+        // a backup folder inside a project: the project's business, not ours
+        write(
+            &h.join("active/corpus/_backups/dump.sql"),
+            101 * 1024 * 1024,
+        );
+        // a backup archive matched by two rules (backup name + .tar.gz): listed once
+        write(
+            &h.join("claude_config_backup_20260703.tar.gz"),
+            101 * 1024 * 1024,
+        );
         write(&h.join(".claude/settings.json"), 10);
         write(&h.join(".config/Claude_backup/x.img"), 101 * 1024 * 1024);
         for p in [
+            "comfy/models/qwen.safetensors",
+            "claude_config_backup_20260703.tar.gz",
             "dormant/src/index.js",
             "dormant/package.json",
             "dormant/src",
@@ -1006,9 +1045,36 @@ mod tests {
         assert!(venvs[0].path.as_deref().unwrap().ends_with("venvs/old"));
 
         let loose = by_rule("loose-model-files");
-        assert_eq!(loose.len(), 1);
+        assert_eq!(
+            loose.len(),
+            1,
+            "the model loaded today is not proposed: {loose:?}"
+        );
         assert!(loose[0].display.ends_with("qwen.safetensors"));
         assert_eq!(loose[0].effective_level, Level::Review);
+
+        // one owner per path: the archive is a backup first, never an "archive" too, and
+        // the catch-all never re-lists classified files
+        let tgz: Vec<_> = report
+            .recommendations
+            .iter()
+            .filter(|r| r.display.ends_with("claude_config_backup_20260703.tar.gz"))
+            .collect();
+        assert_eq!(tgz.len(), 1, "{tgz:?}");
+        assert_eq!(tgz[0].rule_id, "backup-directories");
+        let catch_all = by_rule("large-files-unclassified");
+        assert!(
+            catch_all
+                .iter()
+                .all(|r| !r.display.ends_with(".safetensors") && !r.display.ends_with(".tar.gz")),
+            "{catch_all:?}"
+        );
+        assert!(
+            by_rule("backup-directories")
+                .iter()
+                .all(|r| !r.display.contains("/active/")),
+            "a backup folder inside a project is skipped"
+        );
 
         let keep = by_rule("claude-code-keep");
         assert!(!keep.is_empty());
@@ -1017,7 +1083,7 @@ mod tests {
             .all(|r| r.command.is_none() && r.effective_level == Level::Never));
 
         let backup = by_rule("backup-directories");
-        assert_eq!(backup.len(), 1, "{backup:?}");
+        assert_eq!(backup.len(), 2, "the Claude_backup dir and the .tar.gz: {backup:?}");
 
         assert!(report.totals.safe > 0 && report.totals.review > 0);
         let ids: HashSet<&str> = report
@@ -1061,6 +1127,38 @@ mod tests {
             .find(|r| r.path.as_deref().unwrap().ends_with("venvs/old"))
             .unwrap();
         assert!(old.in_use.is_some(), "flagged in use");
+    }
+
+    #[test]
+    fn a_running_process_alone_does_not_flag_items_with_a_path() {
+        let tmp = fake_home();
+        let home = tmp.path();
+        let env = Env::with_home(home);
+        let scan = scan(
+            home,
+            ScanOptions {
+                big_file_threshold: 1_000_000,
+                one_filesystem: true,
+            },
+        )
+        .unwrap();
+        let rules = RuleSet::embedded().unwrap();
+        // `node` is "running" (its process name is known) but holds nothing open here
+        let activity = Activity::for_test_with_processes(vec![], vec!["node".into()]);
+        let rule = rules.get("node-modules").unwrap();
+        let cands = pattern_candidates(rule, &scan, &env);
+        let opts = ClassifyOptions {
+            dormancy_days: 60,
+            run_probes: false,
+            in_use_checks: true,
+            ..Default::default()
+        };
+        let recs: Vec<Recommendation> = cands
+            .into_iter()
+            .filter_map(|c| finish(rule, c, &scan, &activity, &opts, false))
+            .collect();
+        assert!(!recs.is_empty());
+        assert!(recs.iter().all(|r| r.in_use.is_none()), "{recs:?}");
     }
 
     #[test]
