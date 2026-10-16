@@ -7,6 +7,28 @@ titre, ce qui a ete decide, par qui, ce qui a ete ecarte, et la preuve (fichier,
 
 ---
 
+## 2026-10-16, premier script reel relu : deux defauts corriges avant execution
+
+- Alexandre : « on passe a la suite ou je suis cobaye ? » → cobaye. Script `safe` genere
+  dans `00_cadrage/clean_safe_2026-10-16.sh` (594 elements, 57,5 Go annonces : 575 dans
+  le bloc utilisateur, 19 en sudo) et relu par Claude avant tout lancement.
+- Contenu : 520 caches Python dans les projets (`__pycache__`, `.pytest_cache`…), 20
+  caches VS Code/Cursor, 16 revisions snap, Docker build cache 15,5 Go, pip 13 Go,
+  corbeille 6,3 Go, tracker3 3,5 Go, npm 3,3 Go, vllm 2 Go, uv, Brave, node_modules de
+  Hermes (dormant depuis juillet) et d'un projet sur Desktop, cargo registry, journald,
+  apt. Aucun `rm` dans un venv ni dans des sources.
+- **Defaut 1** : derniere ligne du bloc sudo, `rm -rf -- '/var/crash'` sans `sudo` → aurait
+  echoue (droits) apres avoir tout fait, et supprimait le dossier qu'apport attend.
+  Correction : regles `rm` en `sudo` → `sudo find <chemin> -mindepth 1 -delete` (vide,
+  garde le dossier) ; `trash` en sudo → `sudo gio trash`.
+- **Defaut 2** : `claude-code-caches` annonce « entrees de moins de 7 jours laissees »
+  mais le classifieur n'appliquait la dormance qu'aux regles `review`. Correction : une
+  regle `safe` qui fixe sa fenetre sans `active_project_level` saute les entrees recentes
+  (`file-history`, `shell-snapshots` touches aujourd'hui ne sont plus proposes) ; les
+  regles de build gardent leur comportement (projet actif → review).
+- Deux tests de regression, 32 verts. Commit 17. Le script doit etre regenere avant d'etre
+  lance.
+
 ## 2026-10-16, mesure reelle des atimes ; seuil relatif ; preferences retenues ; EN·FR
 
 - Alexandre : ecran de chargement vu sur `/` (664,5 Go, 3 249 776 fichiers, 432 473

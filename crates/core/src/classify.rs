@@ -805,6 +805,15 @@ fn finish(
         let recent = cand.last_used.is_some_and(|t| opts.now - t < window);
         match rule.level {
             Level::Review if recent => recent_item = true,
+            // A `safe` rule that sets its own window without an active-project level means
+            // "leave recent entries alone" (session caches that a running tool may need).
+            Level::Safe
+                if recent
+                    && cond.dormancy_days.is_some()
+                    && cond.active_project_level.is_none() =>
+            {
+                recent_item = true
+            }
             Level::Safe => {
                 if let (Some(active_level), Some(project)) =
                     (cond.active_project_level, &cand.project)
@@ -920,8 +929,22 @@ fn render_command(
         .path
         .as_ref()
         .map(|p| shell_quote(&p.to_string_lossy()));
-    let rm = path_q.as_ref().map(|q| format!("rm -rf -- {q}"));
-    let trash = path_q.as_ref().map(|q| format!("gio trash -- {q}"));
+    // System directories (sudo) are emptied, not removed: the service that owns them
+    // expects them to exist (/var/crash, /var/lib/systemd/coredump).
+    let rm = path_q.as_ref().map(|q| {
+        if requires == "sudo" {
+            format!("sudo find {q} -mindepth 1 -delete")
+        } else {
+            format!("rm -rf -- {q}")
+        }
+    });
+    let trash = path_q.as_ref().map(|q| {
+        if requires == "sudo" {
+            format!("sudo gio trash -- {q}")
+        } else {
+            format!("gio trash -- {q}")
+        }
+    });
     // A `safe` item is removed; a `review` item goes to the trash (R13), unless the
     // rule names its tool's command.
     let kind = rule.cleanup.kind;
@@ -1520,5 +1543,79 @@ mod tests {
             "cargo clean --manifest-path '/p'/Cargo.toml"
         );
         assert!(substitute("snap remove {missing}", &c).is_none());
+    }
+
+    /// Found by the first real run (2026-10-16): the sudo block rendered a bare
+    /// `rm -rf -- '/var/crash'`, which would have failed on permissions and removed a
+    /// directory apport expects to exist.
+    #[test]
+    fn sudo_rm_rules_empty_the_directory_with_sudo() {
+        let rules = RuleSet::embedded().unwrap();
+        let rule = rules.get("crash-dumps").unwrap();
+        let c = Candidate {
+            key: "k".into(),
+            display: "/var/crash".into(),
+            path: Some(PathBuf::from("/var/crash")),
+            size: 4096,
+            reclaimable: None,
+            last_used: None,
+            project: None,
+            group: None,
+            fields: BTreeMap::new(),
+            note: None,
+            in_use: None,
+        };
+        let (cmd, requires, _) = render_command(rule, &c, Level::Safe, false);
+        assert_eq!(requires, "sudo");
+        assert_eq!(
+            cmd.as_deref(),
+            Some("sudo find '/var/crash' -mindepth 1 -delete")
+        );
+        // user-level rm is unchanged
+        let pip = rules.get("pip-cache").unwrap();
+        let c2 = Candidate {
+            path: Some(PathBuf::from("/home/x/.cache/pip")),
+            ..c
+        };
+        let (cmd, requires, _) = render_command(pip, &c2, Level::Safe, false);
+        assert_eq!(requires, "user");
+        assert!(cmd.as_deref().is_some_and(
+            |c| c.contains("pip cache purge") || c == "rm -rf -- '/home/x/.cache/pip'"
+        ));
+    }
+
+    /// `claude-code-caches` promises to leave entries younger than 7 days alone; until
+    /// 2026-10-16 the window did nothing for `safe` rules.
+    #[test]
+    fn safe_rules_with_their_own_window_skip_recent_entries() {
+        let tmp = tempfile::tempdir().unwrap();
+        let h = tmp.path();
+        write(&h.join(".claude/shell-snapshots/s1"), 2_000_000);
+        write(&h.join(".claude/debug/old.log"), 2_000_000);
+        age(&h.join(".claude/debug/old.log"), 30);
+        age(&h.join(".claude/debug"), 30);
+        let env = Env::with_home(h);
+        let report = report_with_atime(h, &env, AtimeContext::default());
+        let cc: Vec<_> = report
+            .recommendations
+            .iter()
+            .filter(|r| r.rule_id == "claude-code-caches")
+            .collect();
+        let snaps = cc
+            .iter()
+            .find(|r| r.path.as_deref().unwrap().ends_with("shell-snapshots"))
+            .expect("shell-snapshots classified");
+        assert!(snaps.recent, "touched today: left alone");
+        let debug = cc
+            .iter()
+            .find(|r| r.path.as_deref().unwrap().ends_with("debug"))
+            .expect("debug classified");
+        assert!(!debug.recent, "30 days old: proposed");
+        // node_modules keep their "active project raises to review" behaviour
+        assert!(report
+            .recommendations
+            .iter()
+            .filter(|r| r.rule_id == "node-modules")
+            .all(|r| !r.recent));
     }
 }
