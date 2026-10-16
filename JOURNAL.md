@@ -7,6 +7,20 @@ titre, ce qui a ete decide, par qui, ce qui a ete ecarte, et la preuve (fichier,
 
 ---
 
+## 2026-10-16, release 0.1.1 publiee — etape 6 close
+
+- Alexandre : paquets reconstruits, tag `v0.1.1`, push, release publiee avec les quatre
+  fichiers. Verifie depuis le cloud : `main` = `v0.1.1^{}`, `.deb` conforme a
+  `SHA256SUMS`, `cleanator-cli 0.1.1`, script genere avec `set -uo pipefail` + `run`.
+- `SHA256SUMS` publie contient aussi les trois paquets 0.1.0 restes dans `dist/` (sommes
+  exactes, bruit) → `build.sh` ne somme plus que la version courante (commit 20, pour la
+  0.1.2 ; pas de re-televersement).
+- Bilan de la journee du 16 octobre : 0.1.0 le matin, 0.1.1 l'apres-midi apres un vrai
+  nettoyage (54,8 Gio) qui a revele trois defauts (sudo rm, fenetre safe, set -e) et deux
+  ameliorations (residus, seuil atime), tous corriges et testes. Reste : le texte de
+  presentation, puis la 0.2 (`.rpm` Fedora, commits non pousses, doublons, caches
+  recemment touches).
+
 ## 2026-10-16, second passage reussi ; 0.1.1 prete a sortir
 
 - Alexandre : script suite (18 elements, mecanique `run`) execute sans aucun echec : 12

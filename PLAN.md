@@ -200,7 +200,9 @@ D5. **Tests** : options de montage et jour de lecture massive injectables dans
 - [x] Conception D1–D5 validee par Alexandre, D2 strict (« je suis ta recommandation ») — 2026-10-16
 - [x] Code + tests (coeur : module `atime`, 29 tests verts, clippy propre), affichage (app :
       bandeau sous les KPI ; CLI : notes + `--explain`), locales, `docs/rules.md` — commit 15
-- [ ] `SHA256SUMS` propre a la reconstruction (script corrige, a constater au build 0.1.1)
+- [x] `SHA256SUMS` propre : plus de ligne pour lui-meme (constate a la 0.1.1) ; liste
+      encore les paquets 0.1.0 restes dans `dist/` → le script ne somme plus que la version
+      courante (pour la 0.1.2)
 - [x] Ecran de chargement vu par Alexandre sur `/` (664 Go, 3,2 M fichiers) : etape,
       compteurs, pulsation OK ; KPI « 0B » pendant le scan → « — » ; pied de page recalcule
       au changement de langue — 2026-10-16
@@ -208,6 +210,8 @@ D5. **Tests** : options de montage et jour de lecture massive injectables dans
       defauts corriges avant execution), execute : **54,1 Gio liberes** (57,5 annonces,
       2,4 restants) ; arret sur verrou apt → script rendu resilient ; residus < 1 Mio
       non proposes. Suite (13 snaps, apt, /var/crash) a lancer avec le script regenere
-- [ ] CHANGELOG 0.1.1 ecrit et date, version 0.1.1 dans Cargo.toml, note de version prete
-      (`00_cadrage/release_v0.1.1_notes.md`) ; reste : paquets, tag, push, release (accord)
-- [ ] Texte de presentation (r/rust, r/linux, Show HN) — apres la release
+- [x] Release **v0.1.1** publiee par Alexandre (2026-10-16) : tag et `main` alignes,
+      `.deb` retelecharge et verifie depuis le cloud, binaire 0.1.1 avec la mecanique `run`.
+      **Etape 6 close.**
+- [ ] Texte de presentation (r/rust, r/linux, Show HN) — a preparer maintenant, sur decision
+      d'Alexandre du moment

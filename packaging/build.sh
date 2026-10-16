@@ -75,4 +75,5 @@ echo
 echo "== dist/"
 rm -f "$DIST/SHA256SUMS"
 ls -la "$DIST"
-(cd "$DIST" && sha256sum ./*.deb ./*.rpm ./*.AppImage 2>/dev/null) | tee "$DIST/SHA256SUMS"
+# Only this version's packages: older ones may still sit in dist/.
+(cd "$DIST" && sha256sum ./*"$VERSION"*.deb ./*"$VERSION"*.rpm ./*"$VERSION"*.AppImage 2>/dev/null) | tee "$DIST/SHA256SUMS"
