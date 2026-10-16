@@ -41,5 +41,11 @@
   "legend.backup": "Sauvegardes & archives",
   "legend.git-reclonable": "Dépôts re-clonables",
   "legend.system": "Système",
-  "panel.recent": "{n} éléments utilisés depuis moins de {days} jours sont classés mais non proposés"
+  "panel.recent": "{n} éléments utilisés depuis moins de {days} jours sont classés mais non proposés",
+  "panel.group": "{name} — {n} éléments",
+  "detail.last_used": "dernier usage",
+  "detail.regenerate": "régénération",
+  "detail.cost": "coût",
+  "detail.rule": "règle",
+  "detail.docs": "doc ↗"
 }

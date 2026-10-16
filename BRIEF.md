@@ -62,7 +62,13 @@ Nom public : Cleanator. Depot : `github.com/blackberrylabs/cleanator`. Licence :
   recommandation dit pourquoi c'est supprimable, comment ca se regenere, et combien ca
   coutera a regenerer (un cache npm : secondes ; un modele de 15 Go : un telechargement).
 - Langue : interface en anglais, francais en option (detection de la langue du systeme,
-  bascule dans les reglages). README, code, commentaires, commits, issues : anglais.
+  bouton de bascule). README, code, commentaires, commits, issues : anglais. **Pas d'autre
+  langue en v1** (tranche le 2026-10-16) : le public lit l'anglais ; une langue que
+  l'auteur ne lit pas est un risque sur un outil qui propose des suppressions ; le vrai
+  cout est dans les 70 regles (pourquoi / regeneration / cout), qui restent en anglais
+  quelle que soit la langue de l'interface — limite assumee, dite dans le README. Les
+  langues suivantes viendront de contributeurs natifs (`locales/xx.json` + relecture),
+  l'espagnol en premier si l'auteur s'y met lui-meme.
 - Simple, facile, intuitif (principe de produit, dit par Alexandre le 2026-10-15) : une
   fenetre ; le scan demarre a l'ouverture sans reglage ; aucune notion a apprendre avant le
   premier resultat ; trois gestes — regarder, cocher, copier le script. Chaque ecran ou
@@ -309,6 +315,8 @@ Tranchees le 2026-10-15 (conversation Cowork, entree JOURNAL du meme jour) :
 - Installation : `.deb` + AppImage + `.rpm` (R17), sur GitHub Releases.
 - Nom Cleanator, verifie libre sur GitHub.
 - Q2 (script) : `rm` pour `safe`, corbeille pour `review` (R13).
+- Langues (2026-10-16) : anglais + francais seulement en v1 ; explications des regles en
+  anglais ; autres langues par contribution (§3).
 - Q4 (perimetre d'analyse) : dossier personnel + emplacements systeme connus (`/var/cache/apt`,
   journald, snap, flatpak, Docker par sa propre commande) ; disque entier en option, avec
   avertissement que sans root une partie reste « non analysee ».

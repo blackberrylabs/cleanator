@@ -95,9 +95,13 @@ du script) en statique, valides visuellement ; `locales/` complets en `en` et `f
       ecrit et compile le 2026-10-16, a juger a l'ecran
 - [x] Decision d'Alexandre sur le spike : « pour un premier jet, c'est plutot pas mal »
       (2026-10-16, deux captures) — iced confirme
-- [ ] Direction visuelle (reference Sniffnet : cartes nettes, couleurs par categorie) et
-      palette des categories
-- [ ] Ecrans statiques sur donnees fictives, deux profondeurs d'affichage (`docs/rules.md`)
+- [x] Direction visuelle : palette des categories validee par script (dataviz) dans les
+      deux modes, cartes nettes, legende traduite — 2026-10-16
+- [x] Deux profondeurs d'affichage (`docs/rules.md`) et regroupement des regles nombreuses
+      — dans l'app reelle, pas en statique (le spike etant l'app) — 2026-10-16
+- [ ] Vue « assistants IA » (configuration / historique / caches par assistant) et vue
+      « projets dormants » (poids regenerable par projet), BRIEF §1
+- [ ] Ecran de chargement (progression du scan) ; icone de l'application
 - [ ] Validation visuelle
 
 ## Etape 4. Assemblage et release 0.1.0

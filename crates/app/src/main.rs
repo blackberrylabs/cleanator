@@ -4,7 +4,7 @@
 mod i18n;
 mod treemap;
 
-use std::collections::HashSet;
+use std::collections::{BTreeMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -18,7 +18,7 @@ use cleanator_core::paths::Env;
 use cleanator_core::rules::{Level, RuleSet};
 use cleanator_core::scan::{scan, DirNode, Scan, ScanOptions};
 use cleanator_core::script::{generate, ScriptOptions, Selection};
-use cleanator_core::size::human;
+use cleanator_core::size::{human, ymd};
 
 use i18n::{Lang, Strings};
 use treemap::{Item, Treemap, TreemapEvent};
@@ -36,6 +36,10 @@ enum Message {
     Treemap(TreemapEvent),
     Up,
     Toggle(String, bool),
+    ToggleGroup(String, bool),
+    Expand(String),
+    OpenGroup(String),
+    OpenDocs(String),
     SelectSafe,
     Clear,
     CopyScript,
@@ -66,8 +70,13 @@ struct App {
     report: Option<Arc<Report>>,
     current: PathBuf,
     selected: HashSet<String>,
+    expanded: HashSet<String>,
+    open_groups: HashSet<String>,
     status: String,
 }
+
+/// Rules with more items than this are shown as one group row, opened on demand.
+const GROUP_THRESHOLD: usize = 6;
 
 impl App {
     fn new() -> (App, Task<Message>) {
@@ -90,6 +99,8 @@ impl App {
             report: None,
             current: root.clone(),
             selected: HashSet::new(),
+            expanded: HashSet::new(),
+            open_groups: HashSet::new(),
             status,
         };
         (app, start_scan(root))
@@ -111,25 +122,31 @@ impl App {
         self.strings.t(key, &[])
     }
 
+    fn refresh_status(&mut self) {
+        if let (Some(scan), Some(report)) = (&self.scan, &self.report) {
+            self.status = self.strings.t(
+                "status.scanned",
+                &[
+                    ("size", &human(scan.summary.total_size)),
+                    (
+                        "secs",
+                        &format!("{:.1}", scan.summary.duration_ms as f64 / 1000.0),
+                    ),
+                    ("rules", &report.rule_count.to_string()),
+                    ("dormancy", &report.dormancy_days.to_string()),
+                ],
+            );
+        }
+    }
+
     fn update(&mut self, message: Message) -> Task<Message> {
         match message {
             Message::Scanned(Ok((scan, report))) => {
-                self.status = self.strings.t(
-                    "status.scanned",
-                    &[
-                        ("size", &human(scan.summary.total_size)),
-                        (
-                            "secs",
-                            &format!("{:.1}", scan.summary.duration_ms as f64 / 1000.0),
-                        ),
-                        ("rules", &report.rule_count.to_string()),
-                        ("dormancy", &report.dormancy_days.to_string()),
-                    ],
-                );
                 self.current = scan.summary.root.clone();
                 self.scan = Some(scan);
                 self.report = Some(report);
                 self.phase = Phase::Ready;
+                self.refresh_status();
             }
             Message::Scanned(Err(e)) => {
                 self.status = self.strings.t("status.error", &[("error", &e)]);
@@ -158,14 +175,40 @@ impl App {
                     self.selected.remove(&id);
                 }
             }
+            Message::ToggleGroup(rule_id, on) => {
+                if let Some(r) = &self.report {
+                    for rec in r
+                        .recommendations
+                        .iter()
+                        .filter(|x| x.rule_id == rule_id && selectable(x))
+                    {
+                        if on {
+                            self.selected.insert(rec.id.clone());
+                        } else {
+                            self.selected.remove(&rec.id);
+                        }
+                    }
+                }
+            }
+            Message::Expand(id) => {
+                if !self.expanded.remove(&id) {
+                    self.expanded.insert(id);
+                }
+            }
+            Message::OpenGroup(key) => {
+                if !self.open_groups.remove(&key) {
+                    self.open_groups.insert(key);
+                }
+            }
+            Message::OpenDocs(url) => {
+                if url.starts_with("http") {
+                    let _ = std::process::Command::new("xdg-open").arg(&url).spawn();
+                }
+            }
             Message::SelectSafe => {
                 if let Some(r) = &self.report {
                     for rec in &r.recommendations {
-                        if rec.effective_level == Level::Safe
-                            && rec.in_use.is_none()
-                            && !rec.recent
-                            && rec.command.is_some()
-                        {
+                        if rec.effective_level == Level::Safe && selectable(rec) {
                             self.selected.insert(rec.id.clone());
                         }
                     }
@@ -206,20 +249,7 @@ impl App {
                     Lang::Fr
                 };
                 self.strings = Strings::load(self.lang);
-                if let (Some(scan), Some(report)) = (&self.scan, &self.report) {
-                    self.status = self.strings.t(
-                        "status.scanned",
-                        &[
-                            ("size", &human(scan.summary.total_size)),
-                            (
-                                "secs",
-                                &format!("{:.1}", scan.summary.duration_ms as f64 / 1000.0),
-                            ),
-                            ("rules", &report.rule_count.to_string()),
-                            ("dormancy", &report.dormancy_days.to_string()),
-                        ],
-                    );
-                }
+                self.refresh_status();
             }
         }
         Task::none()
@@ -247,7 +277,7 @@ impl App {
         let header = self.view_header();
         let body: Element<'_, Message> = match (&self.phase, &self.scan, &self.report) {
             (Phase::Ready, Some(scan), Some(report)) => {
-                row![self.view_explorer(scan, report), self.view_panel(report),]
+                row![self.view_explorer(scan, report), self.view_panel(report)]
                     .spacing(14)
                     .height(Length::Fill)
                     .into()
@@ -298,13 +328,13 @@ impl App {
                 &self.t("kpi.safe"),
                 safe,
                 &items(n_safe),
-                Some(level_color(Level::Safe))
+                Some(level_color(Level::Safe, self.dark))
             ),
             self.kpi(
                 &self.t("kpi.review"),
                 review,
                 &items(n_review),
-                Some(level_color(Level::Review))
+                Some(level_color(Level::Review, self.dark))
             ),
             self.kpi(&self.t("kpi.in_use"), in_use, "", None),
             self.kpi(&self.t("kpi.never"), never, "", None),
@@ -322,17 +352,7 @@ impl App {
     ) -> Element<'a, Message> {
         let mut head = row![].spacing(6).align_y(iced::Alignment::Center);
         if let Some(c) = dot {
-            head =
-                head.push(
-                    container(Space::new(8, 8)).style(move |_: &Theme| container::Style {
-                        background: Some(Background::Color(c)),
-                        border: Border {
-                            radius: 4.0.into(),
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    }),
-                );
+            head = head.push(swatch(c, 8));
         }
         head = head.push(text(label.to_string()).size(12).style(text::secondary));
         let sub_text = if sub.is_empty() {
@@ -400,15 +420,8 @@ impl App {
             let label = self.strings.t(&format!("legend.{cat}"), &[]);
             r = r.push(
                 row![
-                    container(Space::new(10, 10)).style(move |_: &Theme| container::Style {
-                        background: Some(Background::Color(category_color(cat))),
-                        border: Border {
-                            radius: 3.0.into(),
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    }),
-                    text(label).size(11).style(text::secondary),
+                    swatch(category_color(cat, self.dark), 10),
+                    text(label).size(11).style(text::secondary)
                 ]
                 .spacing(5)
                 .align_y(iced::Alignment::Center),
@@ -495,7 +508,7 @@ impl App {
             };
             list = list.push(
                 row![
-                    pill(label, level_color(level)),
+                    pill(label, level_color(level, self.dark)),
                     text(human(total))
                         .size(12)
                         .font(iced::Font::MONOSPACE)
@@ -510,8 +523,36 @@ impl App {
                     left: 2.0,
                 }),
             );
-            for r in recs.iter().take(400) {
-                list = list.push(self.view_rec(r));
+
+            // Rules with many items become one group row; the rest stay individual rows;
+            // everything sorted by size.
+            let mut by_rule: BTreeMap<&str, Vec<&Recommendation>> = BTreeMap::new();
+            for r in &recs {
+                by_rule.entry(r.rule_id.as_str()).or_default().push(r);
+            }
+            enum Row<'r> {
+                One(&'r Recommendation),
+                Group(&'r str, Vec<&'r Recommendation>, u64),
+            }
+            let mut rows: Vec<(u64, Row)> = Vec::new();
+            for (rule_id, items) in by_rule {
+                if items.len() > GROUP_THRESHOLD {
+                    let sum: u64 = items.iter().map(|r| r.reclaimable).sum();
+                    rows.push((sum, Row::Group(rule_id, items, sum)));
+                } else {
+                    for r in items {
+                        rows.push((r.reclaimable, Row::One(r)));
+                    }
+                }
+            }
+            rows.sort_by_key(|(size, _)| std::cmp::Reverse(*size));
+            for (_, r) in rows {
+                match r {
+                    Row::One(rec) => list = list.push(self.view_rec(rec, 0)),
+                    Row::Group(rule_id, items, sum) => {
+                        list = list.push(self.view_group(level, rule_id, &items, sum));
+                    }
+                }
             }
         }
 
@@ -574,32 +615,157 @@ impl App {
         .into()
     }
 
-    fn view_rec<'a>(&'a self, r: &'a Recommendation) -> Element<'a, Message> {
-        let home = self.root.to_string_lossy().to_string();
-        let display = shorten(&r.display.replacen(&home, "~", 1), 56);
-        let label = format!("{:>7}  {}", human(r.reclaimable), display);
-        let id = r.id.clone();
-        let mut cb = checkbox(label, self.selected.contains(&r.id))
-            .size(16)
-            .text_size(13);
-        let usable = r.in_use.is_none() && r.command.is_some();
-        if usable {
-            cb = cb.on_toggle(move |on| Message::Toggle(id.clone(), on));
+    /// A rule with many items: one line with a checkbox for all of them, opened on demand.
+    fn view_group<'a>(
+        &'a self,
+        level: Level,
+        rule_id: &'a str,
+        items: &[&'a Recommendation],
+        sum: u64,
+    ) -> Element<'a, Message> {
+        let key = format!("{level}:{rule_id}");
+        let open = self.open_groups.contains(&key);
+        let selectable_items: Vec<&&Recommendation> =
+            items.iter().filter(|r| selectable(r)).collect();
+        let all_on = !selectable_items.is_empty()
+            && selectable_items
+                .iter()
+                .all(|r| self.selected.contains(&r.id));
+        let name = &items[0].rule_name;
+        let label = format!(
+            "{:>7}  {}",
+            human(sum),
+            self.strings.t(
+                "panel.group",
+                &[("name", name), ("n", &items.len().to_string())]
+            )
+        );
+        let rid = rule_id.to_string();
+        let mut cb = checkbox(label, all_on).size(16).text_size(13);
+        if !selectable_items.is_empty() {
+            cb = cb.on_toggle(move |on| Message::ToggleGroup(rid.clone(), on));
         }
-        let mut meta = format!("{} · {}", r.rule_id, shorten(&r.why, 70));
-        if let Some(u) = &r.in_use {
-            meta = format!("{} · {}: {}", r.rule_id, self.t("panel.in_use"), u);
-        }
-        column![cb, text(meta).size(10).style(text::secondary)]
+        let caret = button(text(if open { "▾" } else { "▸" }).size(12))
+            .style(button::text)
+            .padding(2)
+            .on_press(Message::OpenGroup(key.clone()));
+        let mut col = column![row![caret, cb].spacing(4).align_y(iced::Alignment::Center)]
             .spacing(1)
             .padding(iced::Padding {
                 top: 2.0,
                 right: 0.0,
                 bottom: 6.0,
                 left: 0.0,
-            })
-            .into()
+            });
+        if open {
+            for rec in items {
+                col = col.push(self.view_rec(rec, 22));
+            }
+        }
+        col.into()
     }
+
+    /// One recommendation: a compact line (size, path, rule, why) and, when expanded, the
+    /// exact command, the full path, the last use, the cost and a link to the rule's
+    /// documentation — the second depth a developer checks before ticking.
+    fn view_rec<'a>(&'a self, r: &'a Recommendation, indent: u16) -> Element<'a, Message> {
+        let home = self.root.to_string_lossy().to_string();
+        let display = shorten(&r.display.replacen(&home, "~", 1), 54);
+        let label = format!("{:>7}  {}", human(r.reclaimable), display);
+        let id = r.id.clone();
+        let mut cb = checkbox(label, self.selected.contains(&r.id))
+            .size(16)
+            .text_size(13);
+        if selectable(r) {
+            cb = cb.on_toggle(move |on| Message::Toggle(id.clone(), on));
+        }
+        let open = self.expanded.contains(&r.id);
+        let caret = button(text(if open { "▾" } else { "▸" }).size(12))
+            .style(button::text)
+            .padding(2)
+            .on_press(Message::Expand(r.id.clone()));
+        let mut meta = format!("{} · {}", r.rule_id, shorten(&r.why, 70));
+        if let Some(u) = &r.in_use {
+            meta = format!("{} · {}: {}", r.rule_id, self.t("panel.in_use"), u);
+        }
+        let mut col = column![
+            row![caret, cb].spacing(4).align_y(iced::Alignment::Center),
+            text(meta).size(10).style(text::secondary),
+        ]
+        .spacing(1)
+        .padding(iced::Padding {
+            top: 2.0,
+            right: 0.0,
+            bottom: 6.0,
+            left: indent as f32,
+        });
+        if open {
+            let mono = |s: String| text(s).size(11).font(iced::Font::MONOSPACE);
+            let mut details = column![].spacing(3);
+            if let Some(p) = &r.path {
+                details = details.push(mono(p.clone()));
+            }
+            if let Some(c) = &r.command {
+                details = details.push(mono(format!("$ {c}")));
+            }
+            details = details.push(
+                text(format!(
+                    "{}: {} · {}: {} · {}: {}",
+                    self.t("detail.last_used"),
+                    r.last_used.map(ymd).unwrap_or_else(|| "—".into()),
+                    self.t("detail.regenerate"),
+                    r.regenerate,
+                    self.t("detail.cost"),
+                    r.cost
+                ))
+                .size(11)
+                .style(text::secondary),
+            );
+            if let Some(n) = &r.notes {
+                details = details.push(text(n.clone()).size(11).style(text::secondary));
+            }
+            let mut links = row![text(format!("{}: {}", self.t("detail.rule"), r.rule_id))
+                .size(11)
+                .style(text::secondary)]
+            .spacing(10)
+            .align_y(iced::Alignment::Center);
+            if r.source_url.starts_with("http") {
+                links = links.push(
+                    button(text(self.t("detail.docs")).size(11))
+                        .style(button::text)
+                        .padding(2)
+                        .on_press(Message::OpenDocs(r.source_url.clone())),
+                );
+            }
+            details = details.push(links);
+            col = col.push(
+                container(details)
+                    .padding(iced::Padding {
+                        top: 6.0,
+                        right: 10.0,
+                        bottom: 6.0,
+                        left: 10.0,
+                    })
+                    .style(|theme: &Theme| {
+                        let p = theme.extended_palette();
+                        container::Style {
+                            background: Some(Background::Color(p.background.base.color)),
+                            border: Border {
+                                radius: 6.0.into(),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        }
+                    })
+                    .width(Length::Fill),
+            );
+        }
+        col.into()
+    }
+}
+
+fn selectable(r: &Recommendation) -> bool {
+    r.in_use.is_none() && r.command.is_some() && !r.recent && r.effective_level != Level::Never
 }
 
 // ------------------------------------------------------------------ helpers
@@ -641,6 +807,19 @@ fn card<'a>(content: Element<'a, Message>) -> container::Container<'a, Message> 
     })
 }
 
+fn swatch<'a>(color: Color, size: u16) -> Element<'a, Message> {
+    container(Space::new(size, size))
+        .style(move |_: &Theme| container::Style {
+            background: Some(Background::Color(color)),
+            border: Border {
+                radius: (size as f32 / 3.0).into(),
+                ..Default::default()
+            },
+            ..Default::default()
+        })
+        .into()
+}
+
 fn pill<'a>(label: String, color: Color) -> Element<'a, Message> {
     container(text(label).size(11).color(treemap::contrast_text(color)))
         .padding([2, 8])
@@ -680,59 +859,71 @@ const LEGEND: &[&str] = &[
     "system",
 ];
 
-fn category_color(cat: &str) -> Color {
-    match cat {
-        "model" | "dataset" | "training-output" => Color::from_rgb8(0x8E, 0x5B, 0xD6),
-        "python-env" => Color::from_rgb8(0x2A, 0x9D, 0x8F),
-        "package-cache" | "tooling" => Color::from_rgb8(0x3A, 0x7B, 0xD5),
-        "build" => Color::from_rgb8(0x5C, 0x6B, 0xC0),
-        "docker" => Color::from_rgb8(0x1F, 0xA5, 0xC9),
-        "assistant-history" | "assistant-cache" | "assistant-config" => {
-            Color::from_rgb8(0xD6, 0x5B, 0x8A)
-        }
-        "backup" | "large-file" => Color::from_rgb8(0xE0, 0x8A, 0x3C),
-        "git-reclonable" => Color::from_rgb8(0x5B, 0xA8, 0x5B),
-        "system" | "system-index" | "browser" | "snapshot" => Color::from_rgb8(0x7A, 0x86, 0x9A),
-        _ => Color::from_rgb8(0x9A, 0x9A, 0xA0),
-    }
+/// Categorical palette: eight hues validated for colour-vision deficiency and contrast
+/// in each mode (dataviz reference palette; the dark steps are the same hues re-stepped
+/// for the dark surface, not a flip). The ninth category, system, is a neutral grey.
+fn category_color(cat: &str, dark: bool) -> Color {
+    let (light, dk): (u32, u32) = match cat {
+        "model" | "dataset" | "training-output" => (0x6250d6, 0x9085e9), // violet
+        "python-env" => (0xeda100, 0xc98500),                            // yellow
+        "package-cache" | "tooling" => (0x2a78d6, 0x3987e5),             // blue
+        "build" => (0xe34948, 0xe66767),                                 // red
+        "docker" => (0x1baf7a, 0x199e70),                                // aqua
+        "assistant-history" | "assistant-cache" | "assistant-config" => (0xe87ba4, 0xd55181), // magenta
+        "backup" | "large-file" => (0xeb6834, 0xd95926), // orange
+        "git-reclonable" => (0x008300, 0x008300),        // green
+        "system" | "system-index" | "browser" | "snapshot" => (0x7a869a, 0x8a94a6), // grey
+        _ => (0x9a9aa0, 0x6b6e78),
+    };
+    hex(if dark { dk } else { light })
 }
 
-fn level_color(level: Level) -> Color {
-    match level {
-        Level::Safe => Color::from_rgb8(0x2E, 0x9E, 0x5B),
-        Level::Review => Color::from_rgb8(0xE0, 0x8A, 0x3C),
-        Level::Never => Color::from_rgb8(0x7A, 0x86, 0x9A),
+fn hex(v: u32) -> Color {
+    Color::from_rgb8(
+        ((v >> 16) & 0xff) as u8,
+        ((v >> 8) & 0xff) as u8,
+        (v & 0xff) as u8,
+    )
+}
+
+fn level_color(level: Level, dark: bool) -> Color {
+    match (level, dark) {
+        (Level::Safe, false) => hex(0x008300),
+        (Level::Safe, true) => hex(0x2fa32f),
+        (Level::Review, false) => hex(0xeb6834),
+        (Level::Review, true) => hex(0xd95926),
+        (Level::Never, _) => hex(0x7a869a),
     }
 }
 
 fn neutral(dark: bool) -> Color {
     if dark {
-        Color::from_rgb8(0x3A, 0x3D, 0x45)
+        hex(0x3a3d45)
     } else {
-        Color::from_rgb8(0xD9, 0xDC, 0xE3)
+        hex(0xd9dce3)
     }
 }
 
-/// Colour of a folder tile: the dominant rule category of what lies at or below it,
-/// when classified items make up at least a third of the folder; neutral otherwise.
+/// Colour of a folder tile: the dominant rule category of what lies at or below it
+/// (classified items, proposed or recent), when they make up at least a third of the
+/// folder; a paler version otherwise; neutral when nothing is classified.
 fn color_for(path: &Path, size: u64, report: &Report, dark: bool) -> Color {
-    let mut by_cat: std::collections::BTreeMap<&str, u64> = Default::default();
+    let mut by_cat: BTreeMap<&str, u64> = BTreeMap::new();
     for r in &report.recommendations {
         let Some(p) = &r.path else { continue };
         let p = Path::new(p);
         if p == path || p.starts_with(path) {
             *by_cat.entry(r.category.as_str()).or_default() += r.size;
         } else if path.starts_with(p) {
-            // inside a classified folder: inherit
-            return category_color(&r.category);
+            return category_color(&r.category, dark);
         }
     }
     let Some((cat, total)) = by_cat.iter().max_by_key(|(_, s)| **s) else {
         return neutral(dark);
     };
     if size > 0 && *total * 3 >= size {
-        category_color(cat)
+        category_color(cat, dark)
     } else {
-        treemap::lighten(category_color(cat), if dark { -0.18 } else { 0.22 })
+        treemap::lighten(category_color(cat, dark), if dark { -0.18 } else { 0.22 })
     }
 }

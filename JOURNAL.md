@@ -7,6 +7,31 @@ titre, ce qui a ete decide, par qui, ce qui a ete ecarte, et la preuve (fichier,
 
 ---
 
+## 2026-10-16, direction visuelle (etape 3)
+
+- Fait par Claude : palette des categories prise de la palette de reference dataviz et
+  **validee par script** dans les deux modes (separation daltonienne, bande de clarte,
+  contraste) : violet modeles, jaune envs Python, bleu caches, rouge builds, aqua Docker,
+  magenta assistants, orange sauvegardes, vert re-clonables, gris systeme ; les pas sombres
+  sont les memes teintes re-etagees, pas un simple inversement. Lignes a deux profondeurs
+  (▸ : chemin complet, commande exacte, dernier usage, regeneration, cout, id de regle,
+  lien doc) ; regles de plus de six elements regroupees en une ligne avec case de groupe ;
+  dates lisibles (`ymd` dans le coeur) ; README : explications des regles en anglais.
+  23 + 4 tests, clippy propre.
+- Etat : commit 6 a faire par Alexandre, puis regard sur l'ecran. Restent pour l'etape 3 :
+  vue « assistants IA » et vue « projets dormants » (BRIEF §1), ecran de chargement.
+
+## 2026-10-16, langues : anglais + francais seulement en v1
+
+- Question d'Alexandre : ajouter espagnol, chinois, « les plus grosses langues » ? Avis de
+  Claude : non en v1 — public anglophone de fait, risque d'une traduction non relue sur un
+  outil qui propose des suppressions, et le vrai cout est dans les 70 regles (pourquoi /
+  regeneration / cout en anglais, affiches tels quels meme en francais). Methode open
+  source : `locales/xx.json` + relecture native, par contribution.
+- Decision d'Alexandre : « ok, c'est bon » → inscrit au BRIEF §3 et §10. A ecrire dans le
+  README : explications des regles en anglais.
+- Suite : direction visuelle de l'etape 3 (palette, deux profondeurs, regroupement).
+
 ## 2026-10-16, spike iced vu a l'ecran : « pour un premier jet, c'est plutot pas mal »
 
 - Alexandre a lance l'application (commit 4) : deux captures, theme sombre et clair,

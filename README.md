@@ -34,6 +34,14 @@ that is bind-mounted into a running container). Cleanator was written for that d
 6. **No network, metadata only.** No telemetry, no update check; file contents are never
    read; credentials and configuration files are matched by explicit `never` rules.
 
+## Languages
+
+The interface is in English and French (system language, switchable in the app). The
+explanations attached to each recommendation — *why*, *how it regenerates*, *what it
+costs* — come from the rules and are **English only**, whatever the interface language.
+More languages are welcome as contributions: add `locales/<lang>.json`, have a native
+speaker read it, open a pull request.
+
 ## Try the core
 
 ```sh
