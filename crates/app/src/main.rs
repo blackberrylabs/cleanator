@@ -6,32 +6,46 @@ mod treemap;
 
 use std::collections::{BTreeMap, HashSet};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU8, Ordering};
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use iced::widget::{
     button, canvas, checkbox, column, container, horizontal_space, row, scrollable, text, Space,
 };
-use iced::{Background, Border, Color, Element, Length, Task, Theme};
+use iced::{Background, Border, Color, Element, Length, Subscription, Task, Theme};
 
 use cleanator_core::classify::{classify, ClassifyOptions, Recommendation, Report};
 use cleanator_core::paths::Env;
 use cleanator_core::rules::{Level, RuleSet};
-use cleanator_core::scan::{scan, DirNode, Scan, ScanOptions};
+use cleanator_core::scan::{scan, DirNode, Scan, ScanOptions, ScanProgress};
 use cleanator_core::script::{generate, ScriptOptions, Selection};
 use cleanator_core::size::{human, ymd};
 
 use i18n::{Lang, Strings};
 use treemap::{Item, Treemap, TreemapEvent};
 
+/// Window icon, embedded so the binary is self-sufficient (the `.desktop` entry uses the
+/// same picture from `assets/`).
+const ICON_PNG: &[u8] = include_bytes!("../../../assets/icon-256.png");
+
 fn main() -> iced::Result {
+    let icon = iced::window::icon::from_file_data(ICON_PNG, None).ok();
     iced::application(App::title, App::update, App::view)
         .theme(App::theme)
-        .window_size((1320.0, 860.0))
+        .subscription(App::subscription)
+        .window(iced::window::Settings {
+            size: iced::Size::new(1320.0, 860.0),
+            min_size: Some(iced::Size::new(960.0, 640.0)),
+            icon,
+            ..Default::default()
+        })
         .run_with(App::new)
 }
 
 #[derive(Debug, Clone)]
 enum Message {
+    Tick,
     Scanned(Result<(Arc<Scan>, Arc<Report>), String>),
     Treemap(TreemapEvent),
     SetView(View),
@@ -62,6 +76,27 @@ enum Phase {
     Failed(String),
 }
 
+/// What the background thread is doing, for the loading screen.
+const STAGE_WALKING: u8 = 0;
+const STAGE_RULES: u8 = 1;
+
+/// Shared with the background thread: live counters and the current stage.
+struct Work {
+    progress: Arc<ScanProgress>,
+    stage: Arc<AtomicU8>,
+    started: Instant,
+}
+
+impl Work {
+    fn new() -> Work {
+        Work {
+            progress: Arc::new(ScanProgress::default()),
+            stage: Arc::new(AtomicU8::new(STAGE_WALKING)),
+            started: Instant::now(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum View {
     Explorer,
@@ -83,6 +118,7 @@ struct App {
     open_groups: HashSet<String>,
     status: String,
     view: View,
+    work: Work,
 }
 
 /// Rules with more items than this are shown as one group row, opened on demand.
@@ -99,6 +135,8 @@ impl App {
         let strings = Strings::load(lang);
         let status = strings.t("status.scanning", &[("path", &root.to_string_lossy())]);
         let dark = matches!(std::env::var("CLEANATOR_THEME").as_deref(), Ok("dark"));
+        let work = Work::new();
+        let task = start_scan(root.clone(), &work);
         let app = App {
             lang,
             strings,
@@ -113,12 +151,20 @@ impl App {
             open_groups: HashSet::new(),
             status,
             view: View::Explorer,
+            work,
         };
-        (app, start_scan(root))
+        (app, task)
     }
 
     fn title(&self) -> String {
         self.strings.t("app.title", &[])
+    }
+
+    fn subscription(&self) -> Subscription<Message> {
+        match self.phase {
+            Phase::Scanning => iced::time::every(Duration::from_millis(250)).map(|_| Message::Tick),
+            _ => Subscription::none(),
+        }
     }
 
     fn theme(&self) -> Theme {
@@ -152,6 +198,9 @@ impl App {
 
     fn update(&mut self, message: Message) -> Task<Message> {
         match message {
+            // The loading screen reads the live counters on every view; the tick only
+            // forces a redraw.
+            Message::Tick => {}
             Message::Scanned(Ok((scan, report))) => {
                 self.current = scan.summary.root.clone();
                 self.scan = Some(scan);
@@ -306,9 +355,7 @@ impl App {
             (Phase::Failed(e), _, _) => container(text(e.clone()).size(16))
                 .center(Length::Fill)
                 .into(),
-            _ => container(text(self.status.clone()).size(18))
-                .center(Length::Fill)
-                .into(),
+            _ => self.view_loading(),
         };
         let footer = row![
             text(self.status.clone()).size(12).style(text::secondary),
@@ -322,6 +369,60 @@ impl App {
         ]
         .align_y(iced::Alignment::Center);
         column![header, body, footer].spacing(14).padding(16).into()
+    }
+
+    /// Shown while the background thread walks the disk, then applies the rules: what is
+    /// being read, how much so far, and the promise that nothing is deleted.
+    fn view_loading(&self) -> Element<'_, Message> {
+        let p = &self.work.progress;
+        let secs = self.work.started.elapsed().as_secs_f64();
+        let stage = match self.work.stage.load(Ordering::Relaxed) {
+            STAGE_RULES => self.t("loading.rules"),
+            _ => self.t("loading.walking"),
+        };
+        let counters = self.strings.t(
+            "loading.progress",
+            &[
+                ("size", &human(p.bytes())),
+                ("files", &group_thousands(p.files())),
+                ("dirs", &group_thousands(p.dirs())),
+                ("secs", &format!("{secs:.0}")),
+            ],
+        );
+        // A simple pulse: a dot travelling along a short track, no spinner widget needed.
+        let frame = (secs * 4.0) as usize % 8;
+        let mut track = row![].spacing(6);
+        for i in 0..8 {
+            let c = if i == frame {
+                self.theme().palette().primary
+            } else {
+                neutral(self.dark)
+            };
+            track = track.push(swatch(c, 8));
+        }
+        let body = column![
+            text(self.t("loading.title")).size(22),
+            text(shorten(&self.root.to_string_lossy(), 72))
+                .size(13)
+                .style(text::secondary),
+            Space::with_height(10),
+            track,
+            Space::with_height(10),
+            text(stage).size(14),
+            text(counters)
+                .size(12)
+                .font(iced::Font::MONOSPACE)
+                .style(text::secondary),
+            Space::with_height(18),
+            text(self.t("loading.promise"))
+                .size(12)
+                .style(text::secondary),
+        ]
+        .spacing(6)
+        .align_x(iced::Alignment::Center);
+        container(card(body.into()).padding(32))
+            .center(Length::Fill)
+            .into()
     }
 
     fn view_header(&self) -> Element<'_, Message> {
@@ -494,6 +595,11 @@ impl App {
             );
         }
         for (name, r) in &sorted {
+            let name = if *name == OTHER_ASSISTANT {
+                self.t("assistants.other")
+            } else {
+                name.to_string()
+            };
             let total = r.config + r.history + r.caches;
             let sessions = if r.sessions == 0 {
                 "—".to_string()
@@ -515,7 +621,7 @@ impl App {
                 row![
                     row![
                         swatch(category_color("assistant-history", self.dark), 8),
-                        text(name.to_string()).size(13)
+                        text(name).size(13)
                     ]
                     .spacing(6)
                     .align_y(iced::Alignment::Center)
@@ -576,7 +682,7 @@ impl App {
         let now = chrono_now();
         let home = self.root.to_string_lossy().to_string();
 
-        let mut list = column![].spacing(6);
+        let mut list = column![].spacing(6).width(Length::Fill);
         let (mut dormant_n, mut dormant_size) = (0usize, 0u64);
         for (path, r) in &sorted {
             let node = scan.tree.find(Path::new(path));
@@ -591,10 +697,13 @@ impl App {
             let label = format!(
                 "{:>7}  {}",
                 human(r.regenerable),
-                shorten(&path.replacen(&home, "~", 1), 48)
+                shorten(&path.replacen(&home, "~", 1), 72)
             );
             let ids = r.selectable.clone();
-            let mut cb = checkbox(label, all_on).size(16).text_size(13);
+            let mut cb = checkbox(label, all_on)
+                .size(16)
+                .text_size(13)
+                .width(Length::Fill);
             if !ids.is_empty() {
                 cb = cb.on_toggle(move |on| Message::ToggleIds(ids.clone(), on));
             }
@@ -608,8 +717,14 @@ impl App {
                 self.t("projects.touched"),
                 touched.map(ymd).unwrap_or_else(|| "—".into()),
                 state,
-                self.strings
-                    .t("projects.items", &[("n", &r.items.len().to_string())]),
+                self.strings.t(
+                    if r.items.len() == 1 {
+                        "projects.item"
+                    } else {
+                        "projects.items"
+                    },
+                    &[("n", &r.items.len().to_string())]
+                ),
                 self.t("projects.selectable"),
                 human(r.selectable_size)
             );
@@ -657,8 +772,10 @@ impl App {
         card(
             column![head, scrollable(list).height(Length::Fill)]
                 .spacing(12)
+                .width(Length::Fill)
                 .into(),
         )
+        .width(Length::Fill)
         .height(Length::Fill)
         .into()
     }
@@ -1087,7 +1204,24 @@ fn assistant_of(path: &str) -> Option<&'static str> {
     MAP.iter()
         .find(|(frag, _)| path.contains(frag))
         .map(|(_, name)| *name)
-        .or(Some("Other"))
+        .or(Some(OTHER_ASSISTANT))
+}
+
+/// Sentinel for assistant data outside the known locations; translated in the view.
+const OTHER_ASSISTANT: &str = "\u{0}other";
+
+/// `2592431` → `2 592 431` (thin spaces, readable in both languages).
+#[allow(clippy::manual_is_multiple_of)] // `is_multiple_of` needs Rust 1.87; keep older toolchains
+fn group_thousands(n: u64) -> String {
+    let s = n.to_string();
+    let mut out = String::with_capacity(s.len() + s.len() / 3);
+    for (i, c) in s.chars().enumerate() {
+        if i > 0 && (s.len() - i) % 3 == 0 {
+            out.push('\u{202f}');
+        }
+        out.push(c);
+    }
+    out
 }
 
 fn chrono_now() -> i64 {
@@ -1103,12 +1237,19 @@ fn selectable(r: &Recommendation) -> bool {
 
 // ------------------------------------------------------------------ helpers
 
-fn start_scan(root: PathBuf) -> Task<Message> {
+fn start_scan(root: PathBuf, work: &Work) -> Task<Message> {
     let (tx, rx) = iced::futures::channel::oneshot::channel();
+    let progress = work.progress.clone();
+    let stage = work.stage.clone();
     std::thread::spawn(move || {
         let result = (|| -> Result<(Arc<Scan>, Arc<Report>), String> {
             let rules = RuleSet::embedded().map_err(|e| e.to_string())?;
-            let scan = scan(&root, ScanOptions::default()).map_err(|e| e.to_string())?;
+            let opts = ScanOptions {
+                progress: Some(progress),
+                ..Default::default()
+            };
+            let scan = scan(&root, opts).map_err(|e| e.to_string())?;
+            stage.store(STAGE_RULES, Ordering::Relaxed);
             let env = Env::current();
             let report = classify(&scan, &rules, &env, &ClassifyOptions::default());
             Ok((Arc::new(scan), Arc::new(report)))
@@ -1268,4 +1409,31 @@ fn blend(a: Color, b: Color, t: f32) -> Color {
         a.g + (b.g - a.g) * t,
         a.b + (b.b - a.b) * t,
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn groups_thousands() {
+        assert_eq!(group_thousands(0), "0");
+        assert_eq!(group_thousands(999), "999");
+        assert_eq!(group_thousands(1_000), "1\u{202f}000");
+        assert_eq!(group_thousands(2_592_431), "2\u{202f}592\u{202f}431");
+    }
+
+    #[test]
+    fn other_assistant_is_translated_in_both_languages() {
+        for lang in [Lang::En, Lang::Fr] {
+            let s = Strings::load(lang);
+            let other = s.t("assistants.other", &[]);
+            assert!(!other.is_empty() && !other.starts_with("assistants."));
+        }
+        assert_eq!(
+            assistant_of("/home/x/.claude/projects"),
+            Some("Claude Code")
+        );
+        assert_eq!(assistant_of("/home/x/.somewhere"), Some(OTHER_ASSISTANT));
+    }
 }

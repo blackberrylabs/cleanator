@@ -13,6 +13,6 @@ path = "src/main.rs"
 
 [dependencies]
 cleanator-core = { path = "../core" }
-iced = { version = "=0.13.1", features = ["canvas", "advanced"] }
+iced = { version = "=0.13.1", features = ["canvas", "advanced", "tokio", "image"] }
 serde_json.workspace = true
 serde.workspace = true

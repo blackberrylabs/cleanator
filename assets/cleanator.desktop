@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=Cleanator
+GenericName=Disk cleaner
+GenericName[fr]=Nettoyeur de disque
+Comment=See where your disk went — models, venvs, Docker, AI assistants — and get a cleanup script you read before running. Never deletes anything itself.
+Comment[fr]=Voir où est passé le disque — modèles, venvs, Docker, assistants IA — et obtenir un script de nettoyage à lire avant de le lancer. Ne supprime jamais rien lui-même.
+Exec=cleanator
+Icon=cleanator
+Terminal=false
+Categories=System;Utility;FileTools;
+Keywords=disk;clean;cache;docker;ollama;venv;treemap;
+StartupWMClass=cleanator

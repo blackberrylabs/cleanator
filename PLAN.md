@@ -101,15 +101,19 @@ du script) en statique, valides visuellement ; `locales/` complets en `en` et `f
       — dans l'app reelle, pas en statique (le spike etant l'app) — 2026-10-16
 - [x] Vue « assistants IA » (configuration / historique / caches par assistant) et vue
       « projets » (poids regenerable par projet, actif/dormant), BRIEF §1 — 2026-10-16
-- [ ] Ecran de chargement (progression du scan) ; icone de l'application
-- [ ] Validation visuelle
+- [x] Ecran de chargement (compteurs reels : octets, fichiers, dossiers, secondes ; etape
+      « mesure » puis « regles ») ; icone (treemap, une tuile rayee cochee) et `.desktop`
+      — 2026-10-16
+- [ ] Validation visuelle des trois onglets + chargement (captures du 2026-10-16 : onglets
+      OK, carte Projets etait a mi-largeur → corrige au commit 9)
 
 ## Etape 4. Assemblage et release 0.1.0
 
 Resultat visible attendu : `.deb`, AppImage et `.rpm` sur GitHub Releases, installes et
 testes sur la machine de dev.
 
-- [ ] Branchement interface ↔ coeur (appels directs a `crates/core`, scan en tache de fond)
+- [x] Branchement interface ↔ coeur (appels directs a `crates/core`, scan en tache de fond)
+      — fait des le spike, 2026-10-16
 - [ ] Paquets : `cargo-deb`, `cargo-generate-rpm`, AppImage (`linuxdeploy`/`appimagetool`) ;
       test d'installation des trois sur la machine de dev
 - [ ] Depot `blackberrylabs/cleanator` (LICENSE MIT, README minimal) — push sur accord

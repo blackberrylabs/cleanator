@@ -15,14 +15,22 @@ lui-meme. L'outil ne supprime jamais rien. 100 % Rust (coeur en crate, CLI, inte
 iced). Open source MIT, anglais (francais en option), publie sous
 `github.com/blackberrylabs`. Detail dans `BRIEF.md`.
 
-## Etat au 2026-10-15
+## Etat au 2026-10-16
 
-BRIEF clos (rev. 6 : 100 % Rust / iced). Etape 1 close (70 regles). Etape 2 faite dans la
-nuit du 15 au 16 octobre : le coeur compile, 21 tests verts, clippy propre, scanner egal a
-`du` a l'octet pres, bout en bout valide sur un home fictif. **Pas encore compile ni lance
-sur la vraie machine** : c'est la premiere chose a faire (commandes ci-dessous). Depot git
-local cree, premier commit fait ; le second est prepare (fichiers indexes) et attend une
-commande du matin (verrous git a retirer, voir JOURNAL). Detail et suite : `PLAN.md`.
+BRIEF clos (rev. 6 : 100 % Rust / iced). Etapes 0, 1 (70 regles) et 2 (coeur : scanner
+egal a `du` a l'octet pres sur 636 Go, sondeurs, classifieur, script) closes. Etape 3 quasi
+close : application iced reelle (treemap, KPI, recommandations a deux profondeurs, onglets
+Explorateur / Assistants IA / Projets, ecran de chargement, icone, clair/sombre, en/fr),
+validee a l'ecran par Alexandre a chaque capture ; reste sa validation des dernieres
+corrections (commit 9). Deux passes reelles sur sa machine acceptees (57,9 Go surs,
+121,5 Go a verifier). Suite : etape 4, paquets `.deb` / `.rpm` / AppImage, puis 0.1.0 —
+le push et la release attendent son accord explicite, et l'adresse de commit (placeholder
+`alexandre@blackberrylabs.dev`) doit etre corrigee avant tout push. 10 regles ont encore
+une source `to-verify`. Detail et suite : `PLAN.md`.
+
+Methode de travail : Claude compile et teste dans le cloud, copie les fichiers sur le PC
+(sommes verifiees), prepare `00_cadrage/commit_N_message.txt` ; Alexandre lance la
+commande complete (verrous git a retirer : `find .git -name '*.lock' -delete`).
 
 ## A lire avant de travailler
 
@@ -80,6 +88,6 @@ R10 bis metadonnees seulement, fichiers d'identification jamais touches.
 - `BRIEF.md`, `PLAN.md`, `JOURNAL.md`, `CLAUDE.md` — pilotage, en francais.
 - `rules/` — les regles de classement (TOML, anglais), `docs/rules.md` leur schema.
 - `Cargo.toml` racine, `crates/core` (scanner, regles, sondeurs, classifieur, script),
-  `crates/cli` (`cleanator-cli`), `crates/app` (iced, vide jusqu'au spike), `locales/`
-  (vide jusqu'a l'etape 3), `README.md` (anglais), `LICENSE` (MIT).
+  `crates/cli` (`cleanator-cli`), `crates/app` (`cleanator`, iced 0.13.1), `locales/` (`en.json`,
+  `fr.json`), `assets/` (icone SVG/PNG, `.desktop`), `README.md` (anglais), `LICENSE` (MIT).
 - `00_cadrage/` est hors git (`.gitignore`) : inventaire personnel, captures, sorties.

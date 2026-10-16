@@ -7,6 +7,29 @@ titre, ce qui a ete decide, par qui, ce qui a ete ecarte, et la preuve (fichier,
 
 ---
 
+## 2026-10-16, captures des trois onglets ; chargement ; icone
+
+- Captures d'Alexandre (Explorateur, Assistants IA, Projets, en francais) : « si tu ne vois
+  rien de bizarre, tu peux continuer ». Vu par Claude et corrige : la carte Projets ne
+  prenait que la moitie de la largeur (colonne sans `Fill`) ; la ligne « Other » des
+  assistants restait en anglais (→ cle `assistants.other`, « Autres ») ; « 1 elements »
+  (→ cle singulier `projects.item`). Les chemins de projets ont desormais 72 caracteres.
+- Fait par Claude : ecran de chargement avec compteurs reels lus dans le fil de scan
+  (`ScanProgress` dans le coeur : octets, fichiers, dossiers, mis a jour par dossier),
+  deux etapes affichees (mesure du disque, puis application des regles et sondes),
+  rappel « lecture seule », pulsation de 8 points ; redessine toutes les 250 ms par une
+  souscription iced (fonctionnalite `tokio`), active seulement pendant le scan.
+- Icone originale `assets/icon.svg` (+ PNG 16 a 512) : une tuile sombre, quatre tuiles
+  treemap aux couleurs des categories, une cinquieme en pointilles avec une coche —
+  « ce qui a ete nettoye ». Icone de fenetre embarquee dans le binaire (fonctionnalite
+  iced `image`, `include_bytes!`), taille minimale de fenetre 960×640.
+  `assets/cleanator.desktop` (en + fr) pret pour les paquets.
+- Note : la copie cloud → PC ajoute une signature de provenance (C2PA) aux images ; les
+  PNG/SVG restent valides, seul le poids change. Les sommes des fichiers texte sont
+  identiques des deux cotes.
+- Commit 9. Reste : validation visuelle par Alexandre, puis etape 4 (paquets .deb, .rpm,
+  AppImage).
+
 ## 2026-10-16, idees consignees ; vues « Assistants IA » et « Projets »
 
 - Alexandre : « oui consigne et tu peux continuer » → pistes de modules consignees dans

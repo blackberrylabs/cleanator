@@ -988,6 +988,7 @@ mod tests {
         let opts = ScanOptions {
             big_file_threshold: 1_000_000,
             one_filesystem: true,
+            progress: None,
         };
         let scan = scan(home, opts).unwrap();
         let rules = RuleSet::embedded().unwrap();
@@ -1126,6 +1127,7 @@ mod tests {
             ScanOptions {
                 big_file_threshold: 1_000_000,
                 one_filesystem: true,
+                progress: None,
             },
         )
         .unwrap();
@@ -1161,6 +1163,7 @@ mod tests {
             ScanOptions {
                 big_file_threshold: 1_000_000,
                 one_filesystem: true,
+                progress: None,
             },
         )
         .unwrap();

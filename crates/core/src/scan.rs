@@ -202,6 +202,8 @@ pub struct ScanOptions {
     pub big_file_threshold: u64,
     /// Stay on the root's filesystem (default true, like `du -x`).
     pub one_filesystem: bool,
+    /// Optional live counters, updated once per directory, for a progress display.
+    pub progress: Option<std::sync::Arc<ScanProgress>>,
 }
 
 impl Default for ScanOptions {
@@ -209,7 +211,28 @@ impl Default for ScanOptions {
         ScanOptions {
             big_file_threshold: 1024 * 1024,
             one_filesystem: true,
+            progress: None,
         }
+    }
+}
+
+/// Files and bytes counted so far, readable from another thread while a scan runs.
+#[derive(Debug, Default)]
+pub struct ScanProgress {
+    pub files: AtomicU64,
+    pub bytes: AtomicU64,
+    pub dirs: AtomicU64,
+}
+
+impl ScanProgress {
+    pub fn files(&self) -> u64 {
+        self.files.load(Ordering::Relaxed)
+    }
+    pub fn bytes(&self) -> u64 {
+        self.bytes.load(Ordering::Relaxed)
+    }
+    pub fn dirs(&self) -> u64 {
+        self.dirs.load(Ordering::Relaxed)
     }
 }
 
@@ -352,6 +375,13 @@ fn scan_dir(shared: &Shared, path: PathBuf) -> DirNode {
         }
     }
 
+    if let Some(p) = &shared.opts.progress {
+        // Own files and bytes only: each subdirectory reports its own when it finishes.
+        p.files.fetch_add(node.files, Ordering::Relaxed);
+        p.bytes.fetch_add(node.own_size, Ordering::Relaxed);
+        p.dirs.fetch_add(1, Ordering::Relaxed);
+    }
+
     let mut children: Vec<DirNode> = subdirs
         .into_par_iter()
         .map(|p| scan_dir(shared, p))
@@ -420,6 +450,7 @@ mod tests {
         let opts = ScanOptions {
             big_file_threshold: 1_000_000,
             one_filesystem: true,
+            progress: None,
         };
         let scan = scan(root, opts).unwrap();
         let tree = &scan.tree;
