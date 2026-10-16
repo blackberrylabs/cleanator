@@ -213,5 +213,6 @@ D5. **Tests** : options de montage et jour de lecture massive injectables dans
 - [x] Release **v0.1.1** publiee par Alexandre (2026-10-16) : tag et `main` alignes,
       `.deb` retelecharge et verifie depuis le cloud, binaire 0.1.1 avec la mecanique `run`.
       **Etape 6 close.**
-- [ ] Texte de presentation (r/rust, r/linux, Show HN) — a preparer maintenant, sur decision
-      d'Alexandre du moment
+- [x] Textes de presentation prepares (r/rust, Show HN, r/linux + mode d'emploi) dans
+      `00_cadrage/2026-10-16_textes_presentation.md` — publication par Alexandre dans une
+      semaine environ, pas le jour de la sortie (sa decision)

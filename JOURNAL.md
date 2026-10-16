@@ -7,6 +7,18 @@ titre, ce qui a ete decide, par qui, ce qui a ete ecarte, et la preuve (fichier,
 
 ---
 
+## 2026-10-16, textes de presentation prepares et mis de cote
+
+- Alexandre : « tu peux preparer les trois, mais tu me les mets de cote… peut-etre dans une
+  semaine. Je ne vais pas le faire le jour meme ou on a sorti le produit. » Puis : nouveau
+  logiciel, l'inventaire MCP.
+- Fait par Claude : `00_cadrage/2026-10-16_textes_presentation.md` — mode d'emploi (quand,
+  dans quel ordre, comment repondre, franchise sur l'IA) + trois textes en anglais : r/rust
+  (angle Rust/iced, questions ouvertes a la communaute), Show HN (titre ≤ 80 car. + premier
+  commentaire d'auteur, limites connues), r/linux (angle usage). Chiffre reel : 54,8 Gio.
+  Ligne optionnelle « built with Claude » dans chacun, a garder ou retirer.
+- Cleanator passe en veille active : issues eventuelles, 0.2 au retour.
+
 ## 2026-10-16, release 0.1.1 publiee — etape 6 close
 
 - Alexandre : paquets reconstruits, tag `v0.1.1`, push, release publiee avec les quatre
