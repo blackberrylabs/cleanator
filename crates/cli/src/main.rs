@@ -68,6 +68,21 @@ enum Command {
         #[arg(long)]
         all_filesystems: bool,
     },
+    /// Scan, apply the rules and write a `bbl-report/1` document for the Blackberrylabs
+    /// control tower (always JSON; the home directory when no path is given).
+    Report {
+        path: Option<PathBuf>,
+        #[arg(long)]
+        rules: Option<PathBuf>,
+        #[arg(long, default_value_t = 60)]
+        dormancy_days: u32,
+        #[arg(long)]
+        no_probes: bool,
+        #[arg(long)]
+        no_in_use_checks: bool,
+        #[arg(long)]
+        all_filesystems: bool,
+    },
     /// Scan, apply the rules and write the cleanup script (printed, or saved with -o).
     Script {
         path: PathBuf,
@@ -412,6 +427,28 @@ fn main() -> Result<()> {
             } else {
                 print_report(&report, explain);
             }
+        }
+        Command::Report {
+            path,
+            rules,
+            dormancy_days,
+            no_probes,
+            no_in_use_checks,
+            all_filesystems,
+        } => {
+            let path = path.unwrap_or_else(|| cleanator_core::paths::Env::current().home);
+            let started = std::time::Instant::now();
+            let (_, report) = do_report(
+                &path,
+                rules.as_ref(),
+                dormancy_days,
+                no_probes,
+                no_in_use_checks,
+                all_filesystems,
+            )?;
+            let duration_ms = started.elapsed().as_millis() as u64;
+            let doc = cleanator_core::report::build(&report, duration_ms);
+            print!("{}", doc.to_json());
         }
         Command::Script {
             path,

@@ -34,6 +34,33 @@ const FR: &str = include_str!("../../../locales/fr.json");
 /// same picture from `assets/`).
 const ICON_PNG: &[u8] = include_bytes!("../../../assets/icon-256.png");
 
+/// The first positional argument: the directory to scan.
+fn root_arg() -> Option<PathBuf> {
+    let mut args = std::env::args().skip(1);
+    while let Some(a) = args.next() {
+        if a == "--select" {
+            args.next();
+        } else if !a.starts_with("--") {
+            return Some(PathBuf::from(a));
+        }
+    }
+    None
+}
+
+/// The `--select` argument, if any.
+fn requested_selection() -> Option<String> {
+    let mut args = std::env::args().skip(1);
+    while let Some(a) = args.next() {
+        if a == "--select" {
+            return args.next();
+        }
+        if let Some(v) = a.strip_prefix("--select=") {
+            return Some(v.to_string());
+        }
+    }
+    None
+}
+
 fn main() -> iced::Result {
     let icon = iced::window::icon::from_file_data(ICON_PNG, None).ok();
     iced::application(App::title, App::update, App::view)
@@ -133,10 +160,7 @@ const GROUP_THRESHOLD: usize = 6;
 impl App {
     fn new() -> (App, Task<Message>) {
         let env = Env::current();
-        let root = std::env::args()
-            .nth(1)
-            .map(PathBuf::from)
-            .unwrap_or_else(|| env.home.clone());
+        let root = root_arg().unwrap_or_else(|| env.home.clone());
         let prefs: Prefs<()> = Prefs::load("cleanator");
         let lang = prefs.initial_lang();
         let strings = Strings::load(EN, FR, lang);
@@ -162,6 +186,35 @@ impl App {
             work,
         };
         (app, task)
+    }
+
+    /// Open the group of a rule (or of one item) and move the explorer to its folder.
+    fn apply_selection(&mut self, want: &str) {
+        let Some(report) = self.report.clone() else {
+            return;
+        };
+        let (rule_id, item) = match want.split_once("::") {
+            Some((r, _)) => (r, Some(want)),
+            None => (want, None),
+        };
+        let Some(first) = report.recommendations.iter().find(|r| match item {
+            Some(id) => r.id == id,
+            None => r.rule_id == rule_id && !r.recent && !r.negligible && r.in_use.is_none(),
+        }) else {
+            return;
+        };
+        self.open_groups.insert(format!("{}:{}", first.effective_level, first.rule_id));
+        if item.is_some() && first.effective_level != Level::Never {
+            self.selected.insert(first.id.clone());
+        }
+        if let Some(p) = first.path.as_deref().map(PathBuf::from) {
+            let folder = if p.is_dir() { Some(p.as_path()) } else { p.parent() };
+            if let Some(f) = folder {
+                if self.scan.as_ref().is_some_and(|s| s.tree.find(f).is_some()) {
+                    self.current = f.to_path_buf();
+                }
+            }
+        }
     }
 
     fn title(&self) -> String {
@@ -231,6 +284,11 @@ impl App {
                 self.scan = Some(scan);
                 self.report = Some(report);
                 self.phase = Phase::Ready;
+                // `--select <rule-id>` or `--select <rule-id::key>` (the control tower): open
+                // the group, show the first item's folder, tick the item when one is named.
+                if let Some(want) = requested_selection() {
+                    self.apply_selection(&want);
+                }
                 self.refresh_status();
             }
             Message::Scanned(Err(e)) => {

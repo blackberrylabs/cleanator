@@ -7,6 +7,23 @@ titre, ce qui a ete decide, par qui, ce qui a ete ecarte, et la preuve (fichier,
 
 ---
 
+## 2026-10-16, tard — module de la tour de controle Blackberrylabs
+
+- La tour Blackberrylabs est cadree et son contrat publie (`bbl-report` 0.1.0). Cleanator
+  le parle : `cleanator-cli report [chemin]` (toujours JSON, le home par defaut) et
+  `cleanator [chemin] --select <regle>` (ou `<regle::cle>` pour cocher un item).
+- Choix de grain : **un constat par groupe de regle** du panneau (items proposables
+  seulement : ni recents, ni negligeables, ni en usage), pas un par item — Cleanator en
+  trouve des dizaines, la tour veut une liste lisible. Les dix premiers items en preuve,
+  la commande du script pour un item seul, le dossier a ouvrir, la source de la regle.
+- Gravite par ce que ca libere et comment : groupe safe/review ≥ 1 Gio = a regarder ;
+  < 1 Gio = bon a savoir ; `never` = information. Ecrit dans le CHANGELOG.
+- Test de conformite sur la maison factice des tests (33 tests coeur verts) ; `--select`
+  verifie a l'ecran dans le cloud (groupe ouvert, explorateur sur le dossier, item coche).
+  Rien ne change pour `recommend --json` ni pour l'interface.
+
+---
+
 ## 2026-10-16, textes de presentation prepares et mis de cote
 
 - Alexandre : « tu peux preparer les trois, mais tu me les mets de cote… peut-etre dans une

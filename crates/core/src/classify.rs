@@ -1304,6 +1304,65 @@ mod tests {
         assert_eq!(m.total, 250);
     }
 
+    /// The `bbl-report/1` view conforms, carries the cards' figures, one finding per rule
+    /// group, every finding opening the app on its group.
+    #[test]
+    fn report_conforms() {
+        let tmp = fake_home();
+        let home = tmp.path();
+        let env = Env::with_home(home);
+        let scan = scan(
+            home,
+            ScanOptions {
+                big_file_threshold: 1_000_000,
+                one_filesystem: true,
+                progress: None,
+            },
+        )
+        .unwrap();
+        let rules = RuleSet::embedded().unwrap();
+        let copts = ClassifyOptions {
+            dormancy_days: 60,
+            run_probes: false,
+            in_use_checks: false,
+            ..Default::default()
+        };
+        let report = classify(&scan, &rules, &env, &copts);
+        let doc = crate::report::build(&report, 3);
+        let json = doc.to_json();
+        let back = bbl_report::conformance::check(&json).expect("the report conforms");
+        assert_eq!(back.module.id, "cleanator");
+        let figure = |k: &str| back.summary.iter().find(|s| s.key == k).unwrap().value.clone();
+        assert_eq!(figure("safe"), crate::size::human(report.totals.safe));
+        assert_eq!(figure("review"), crate::size::human(report.totals.review));
+        // One finding per (rule, effective level) among the proposable items.
+        let mut groups = std::collections::BTreeSet::new();
+        for r in report
+            .recommendations
+            .iter()
+            .filter(|r| !r.recent && !r.negligible && r.in_use.is_none())
+        {
+            groups.insert((r.rule_id.clone(), r.effective_level));
+        }
+        assert_eq!(back.findings.len(), groups.len());
+        assert!(back.findings.iter().any(|f| f.kind == "safe"));
+        assert!(back.findings.iter().any(|f| f.kind == "review"));
+        for f in &back.findings {
+            let open = f.open.as_ref().unwrap();
+            assert_eq!(open.app, "cleanator");
+            assert_eq!(open.args[0], home.display().to_string());
+            assert_eq!(open.args[1], "--select");
+            assert!(rules.rules.iter().any(|r| r.id == open.args[2]), "{}", open.args[2]);
+            assert!(!f.evidence.is_empty());
+        }
+        // A `never` group is information; a large safe group is to review.
+        for f in &back.findings {
+            if f.kind == "never" {
+                assert_eq!(f.severity, bbl_report::Severity::Info);
+            }
+        }
+    }
+
     #[test]
     fn classifies_one_case_per_level() {
         let tmp = fake_home();

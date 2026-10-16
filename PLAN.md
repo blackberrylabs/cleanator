@@ -216,3 +216,8 @@ D5. **Tests** : options de montage et jour de lecture massive injectables dans
 - [x] Textes de presentation prepares (r/rust, Show HN, r/linux + mode d'emploi) dans
       `00_cadrage/2026-10-16_textes_presentation.md` — publication par Alexandre dans une
       semaine environ, pas le jour de la sortie (sa decision)
+
+## Etape 7. Module de la tour de controle Blackberrylabs (ouverte le 2026-10-16)
+- [x] Interface depuis `bbl-ui` 0.1.0 (commit 20), anglais par defaut comme les autres outils — 2026-10-16
+- [x] `cleanator-cli report`, `--select` dans l'app, mapping des gravites dans le CHANGELOG — 2026-10-16
+- [ ] Release 0.1.2 — sur accord, quand la tour lira les rapports

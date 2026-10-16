@@ -88,6 +88,7 @@ cleanator-cli rules                 # the 70 rules, validated, with their source
 cleanator-cli scan ~ --depth 1      # sizes, like du -x
 cleanator-cli recommend ~           # what could go, and why
 cleanator-cli script ~ -o clean.sh  # read it, then: bash clean.sh
+cleanator-cli report ~              # a bbl-report/1 document for the Blackberrylabs tower
 ```
 
 `recommend --explain` shows the command behind each item, the `never` items and the rules
@@ -120,7 +121,10 @@ More languages are welcome as contributions: see [`CONTRIBUTING.md`](CONTRIBUTIN
 
 ## Layout
 
-- `crates/core` — scanner, rules engine, probes, classifier, script generator (library)
+- `crates/core` — scanner, rules engine, probes, classifier, script generator (library);
+  `report` speaks [`bbl-report`](https://github.com/blackberrylabs/bbl-report), the contract
+  of the Blackberrylabs control tower; the interface comes from
+  [`bbl-ui`](https://github.com/blackberrylabs/bbl-ui)
 - `crates/cli` — `cleanator-cli`
 - `crates/app` — `cleanator`, the desktop app (iced)
 - `rules/` — the rules, `docs/rules.md` — their schema

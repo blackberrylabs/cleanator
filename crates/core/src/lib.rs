@@ -12,6 +12,7 @@ pub mod exec;
 pub mod inuse;
 pub mod paths;
 pub mod probes;
+pub mod report;
 pub mod rules;
 pub mod scan;
 pub mod script;

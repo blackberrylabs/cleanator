@@ -5,6 +5,27 @@ versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- `cleanator-cli report [path]`: the classified scan as a
+  [`bbl-report/1`](https://github.com/blackberrylabs/bbl-report) document for the
+  Blackberrylabs control tower (always JSON; the home directory when no path is given).
+  Nothing in it is new: the cards' figures, one finding per rule group of the
+  recommendations panel (proposable items only, the first ten as evidence), the folder to
+  open, the command the script would run for a single item, the rule's source. Cleanator's
+  groups map onto the four common severities by what they free and how safely — the tower
+  never reinterprets:
+
+  | Cleanator | Common severity |
+  |---|---|
+  | safe or review group freeing 1 GiB or more | 2 · review |
+  | safe or review group under 1 GiB | 3 · good to know |
+  | `never` group (shown for size, never proposed) | 4 · information |
+
+- `cleanator [path] --select <rule-id>` opens the app on that group, with the explorer on
+  its first item; `--select <rule-id::key>` also ticks that one item. The path to scan stays
+  the first positional argument.
+
 ### Changed
 
 - The interface building blocks, palette, preferences and translated strings now come from
