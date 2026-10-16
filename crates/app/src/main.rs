@@ -2,8 +2,6 @@
 //! Runs the core in a background thread; never deletes anything (R1).
 #![forbid(unsafe_code)]
 
-mod i18n;
-mod settings;
 mod treemap;
 
 use std::collections::{BTreeMap, HashSet};
@@ -24,9 +22,13 @@ use cleanator_core::scan::{scan, DirNode, Scan, ScanOptions, ScanProgress};
 use cleanator_core::script::{generate, ScriptOptions, Selection};
 use cleanator_core::size::{human, ymd};
 
-use i18n::{Lang, Strings};
-use settings::Settings;
+use bbl_ui::palette::{alert, blend, good, hex, neutral as grey};
+use bbl_ui::widgets::{card, pill, swatch};
+use bbl_ui::{Lang, Prefs, Strings};
 use treemap::{Item, Treemap, TreemapEvent};
+
+const EN: &str = include_str!("../../../locales/en.json");
+const FR: &str = include_str!("../../../locales/fr.json");
 
 /// Window icon, embedded so the binary is self-sufficient (the `.desktop` entry uses the
 /// same picture from `assets/`).
@@ -108,6 +110,7 @@ enum View {
 }
 
 struct App {
+    prefs: Prefs<()>,
     lang: Lang,
     strings: Strings,
     dark: bool,
@@ -134,14 +137,15 @@ impl App {
             .nth(1)
             .map(PathBuf::from)
             .unwrap_or_else(|| env.home.clone());
-        let settings = Settings::load();
-        let lang = settings.initial_lang();
-        let strings = Strings::load(lang);
+        let prefs: Prefs<()> = Prefs::load("cleanator");
+        let lang = prefs.initial_lang();
+        let strings = Strings::load(EN, FR, lang);
         let status = strings.t("status.scanning", &[("path", &root.to_string_lossy())]);
-        let dark = settings.initial_dark();
+        let dark = prefs.initial_dark();
         let work = Work::new();
         let task = start_scan(root.clone(), &work);
         let app = App {
+            prefs,
             lang,
             strings,
             dark,
@@ -183,33 +187,10 @@ impl App {
         self.strings.t(key, &[])
     }
 
-    /// `EN · FR`, the active language highlighted like a tab. Each label is in its own
-    /// language on purpose: a reader who does not understand the interface can still find
-    /// their own.
-    fn view_lang_picker(&self) -> Element<'_, Message> {
-        let pick = |lang: Lang, label: &'static str| -> Element<'_, Message> {
-            let b = button(text(label).size(11)).padding([2, 7]);
-            if lang == self.lang {
-                b.style(button::primary).into()
-            } else {
-                b.style(button::text)
-                    .on_press(Message::SetLang(lang))
-                    .into()
-            }
-        };
-        row![pick(Lang::En, "EN"), pick(Lang::Fr, "FR")]
-            .spacing(2)
-            .align_y(iced::Alignment::Center)
-            .into()
-    }
-
     /// Persist language and theme so the next launch starts the same way.
-    fn remember(&self) {
-        Settings {
-            lang: Some(self.lang.code().to_string()),
-            theme: Some(if self.dark { "dark" } else { "light" }.to_string()),
-        }
-        .save();
+    fn remember(&mut self) {
+        self.prefs.remember(self.lang, self.dark);
+        self.prefs.save();
     }
 
     /// The footer line, in the current language, for the current phase.
@@ -362,7 +343,7 @@ impl App {
             Message::SetLang(lang) => {
                 if lang != self.lang {
                     self.lang = lang;
-                    self.strings = Strings::load(lang);
+                    self.strings = Strings::load(EN, FR, lang);
                     self.refresh_status();
                     self.remember();
                 }
@@ -403,16 +384,13 @@ impl App {
                 .into(),
             _ => self.view_loading(),
         };
-        let footer = row![
-            text(self.status.clone()).size(12).style(text::secondary),
-            horizontal_space(),
-            self.view_lang_picker(),
-            Space::with_width(6),
-            button(text(self.t("theme.toggle")).size(12))
-                .style(button::text)
-                .on_press(Message::ToggleTheme),
-        ]
-        .align_y(iced::Alignment::Center);
+        let footer = bbl_ui::widgets::footer(
+            self.status.clone(),
+            self.lang,
+            Message::SetLang,
+            self.t("theme.toggle"),
+            Message::ToggleTheme,
+        );
         let mut page = column![header].spacing(14).padding(16);
         if let Some(notice) = self.view_atime_notice() {
             page = page.push(notice);
@@ -507,7 +485,7 @@ impl App {
             let c = if i == frame {
                 self.theme().palette().primary
             } else {
-                neutral(self.dark)
+                tile_neutral(self.dark)
             };
             track = track.push(swatch(c, 8));
         }
@@ -589,27 +567,17 @@ impl App {
         sub: &str,
         dot: Option<Color>,
     ) -> Element<'a, Message> {
-        let mut head = row![].spacing(6).align_y(iced::Alignment::Center);
-        if let Some(c) = dot {
-            head = head.push(swatch(c, 8));
-        }
-        head = head.push(text(label.to_string()).size(12).style(text::secondary));
         let sub_text = if sub.is_empty() {
             String::new()
         } else {
             shorten(sub, 34)
         };
-        card(
-            column![
-                head,
-                text(value.map(human).unwrap_or_else(|| "—".into())).size(28),
-                text(sub_text).size(11).style(text::secondary),
-            ]
-            .spacing(2)
-            .into(),
+        bbl_ui::widgets::kpi(
+            label,
+            value.map(human).unwrap_or_else(|| "—".into()),
+            sub_text,
+            dot,
         )
-        .width(Length::Fill)
-        .into()
     }
 
     fn view_left<'a>(&'a self, scan: &'a Scan, report: &'a Report) -> Element<'a, Message> {
@@ -975,7 +943,7 @@ impl App {
                 label: c.name.clone(),
                 size: c.size.max(1),
                 color: if c.other_fs {
-                    neutral(self.dark)
+                    tile_neutral(self.dark)
                 } else {
                     color_for(&c.path, c.size, report, self.dark)
                 },
@@ -990,7 +958,7 @@ impl App {
             items.push(Item {
                 label: self.t("treemap.files"),
                 size: node.own_size,
-                color: neutral(self.dark),
+                color: tile_neutral(self.dark),
                 path: None,
             });
         }
@@ -998,7 +966,7 @@ impl App {
             items.push(Item {
                 label: "…".into(),
                 size: others,
-                color: neutral(self.dark),
+                color: tile_neutral(self.dark),
                 path: None,
             });
         }
@@ -1397,48 +1365,6 @@ fn start_scan(root: PathBuf, work: &Work) -> Task<Message> {
     )
 }
 
-fn card<'a>(content: Element<'a, Message>) -> container::Container<'a, Message> {
-    container(content).padding(14).style(|theme: &Theme| {
-        let p = theme.extended_palette();
-        container::Style {
-            background: Some(Background::Color(p.background.weak.color)),
-            border: Border {
-                radius: 10.0.into(),
-                width: 1.0,
-                color: p.background.strong.color,
-            },
-            ..Default::default()
-        }
-    })
-}
-
-fn swatch<'a>(color: Color, size: u16) -> Element<'a, Message> {
-    container(Space::new(size, size))
-        .style(move |_: &Theme| container::Style {
-            background: Some(Background::Color(color)),
-            border: Border {
-                radius: (size as f32 / 3.0).into(),
-                ..Default::default()
-            },
-            ..Default::default()
-        })
-        .into()
-}
-
-fn pill<'a>(label: String, color: Color) -> Element<'a, Message> {
-    container(text(label).size(11).color(treemap::contrast_text(color)))
-        .padding([2, 8])
-        .style(move |_: &Theme| container::Style {
-            background: Some(Background::Color(color)),
-            border: Border {
-                radius: 8.0.into(),
-                ..Default::default()
-            },
-            ..Default::default()
-        })
-        .into()
-}
-
 fn shorten(s: &str, max: usize) -> String {
     let n = s.chars().count();
     if n <= max {
@@ -1483,25 +1409,16 @@ fn category_color(cat: &str, dark: bool) -> Color {
     hex(if dark { dk } else { light })
 }
 
-fn hex(v: u32) -> Color {
-    Color::from_rgb8(
-        ((v >> 16) & 0xff) as u8,
-        ((v >> 8) & 0xff) as u8,
-        (v & 0xff) as u8,
-    )
-}
-
 fn level_color(level: Level, dark: bool) -> Color {
-    match (level, dark) {
-        (Level::Safe, false) => hex(0x008300),
-        (Level::Safe, true) => hex(0x2fa32f),
-        (Level::Review, false) => hex(0xeb6834),
-        (Level::Review, true) => hex(0xd95926),
-        (Level::Never, _) => hex(0x7a869a),
+    match level {
+        Level::Safe => good(dark),
+        Level::Review => alert(dark),
+        Level::Never => grey(),
     }
 }
 
-fn neutral(dark: bool) -> Color {
+/// The tile colour of a folder nothing is classified under (not the family's grey).
+fn tile_neutral(dark: bool) -> Color {
     if dark {
         hex(0x3a3d45)
     } else {
@@ -1524,22 +1441,13 @@ fn color_for(path: &Path, size: u64, report: &Report, dark: bool) -> Color {
         }
     }
     let Some((cat, total)) = by_cat.iter().max_by_key(|(_, s)| **s) else {
-        return neutral(dark);
+        return tile_neutral(dark);
     };
     if size > 0 && *total * 3 >= size {
         category_color(cat, dark)
     } else {
-        blend(category_color(cat, dark), neutral(dark), 0.55)
+        blend(category_color(cat, dark), tile_neutral(dark), 0.55)
     }
-}
-
-/// `a` mixed with `b`: 0.0 is `a`, 1.0 is `b`.
-fn blend(a: Color, b: Color, t: f32) -> Color {
-    Color::from_rgb(
-        a.r + (b.r - a.r) * t,
-        a.g + (b.g - a.g) * t,
-        a.b + (b.b - a.b) * t,
-    )
 }
 
 #[cfg(test)]
@@ -1557,7 +1465,7 @@ mod tests {
     #[test]
     fn other_assistant_is_translated_in_both_languages() {
         for lang in [Lang::En, Lang::Fr] {
-            let s = Strings::load(lang);
+            let s = Strings::load(EN, FR, lang);
             let other = s.t("assistants.other", &[]);
             assert!(!other.is_empty() && !other.starts_with("assistants."));
         }

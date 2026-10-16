@@ -14,6 +14,7 @@ path = "src/main.rs"
 [dependencies]
 cleanator-core = { path = "../core" }
 iced = { version = "=0.13.1", features = ["canvas", "advanced", "tokio", "image"] }
+bbl-ui = { git = "https://github.com/blackberrylabs/bbl-ui", tag = "v0.1.0" }
 serde_json.workspace = true
 serde.workspace = true
 

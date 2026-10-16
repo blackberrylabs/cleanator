@@ -3,6 +3,15 @@
 All notable changes to Cleanator. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versions follow [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+
+- The interface building blocks, palette, preferences and translated strings now come from
+  the shared crate [`bbl-ui`](https://github.com/blackberrylabs/bbl-ui), like the other
+  Blackberrylabs tools. Nothing visible changes — except that the interface now starts in English whatever
+  the system language, as the other tools do; the language chosen once is still remembered.
+
 ## [0.1.1] — 2026-10-16
 
 Lessons from the first real cleanup — a 595 GB home, 54.8 GiB freed in two passes — and

@@ -283,14 +283,7 @@ pub fn lighten(c: Color, amount: f32) -> Color {
 }
 
 /// Black or white text depending on the tile's luminance.
-pub fn contrast_text(c: Color) -> Color {
-    let lum = 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b;
-    if lum > 0.6 {
-        Color::from_rgb(0.12, 0.12, 0.14)
-    } else {
-        Color::from_rgb(0.98, 0.98, 0.98)
-    }
-}
+pub use bbl_ui::palette::contrast_text;
 
 #[cfg(test)]
 mod tests {
