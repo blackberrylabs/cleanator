@@ -7,6 +7,28 @@ titre, ce qui a ete decide, par qui, ce qui a ete ecarte, et la preuve (fichier,
 
 ---
 
+## 2026-10-16, spike iced vu a l'ecran : « pour un premier jet, c'est plutot pas mal »
+
+- Alexandre a lance l'application (commit 4) : deux captures, theme sombre et clair,
+  treemap du vrai disque, 595 safe / 210 review, en francais (langue systeme). Son
+  verdict : « pour un premier jet, c'est plutot pas mal » → **spike valide, iced
+  confirme**, pas de retour a Tauri + React.
+- Question d'Alexandre : renommer en « CleanRS » ? Reponse de Claude, verifiee sur
+  crates.io : `cleanr` existe deja (outil de nettoyage en Rust, cli/tui/core, v0.17) et
+  `clean-rs` aussi ; le suffixe `-rs` est la convention des bibliotheques et portages.
+  Recommandation : garder **Cleanator**. `cleanr` a etudier comme voisin avant la release
+  (README « why not X »). Decision d'Alexandre : en attente.
+- Question d'Alexandre : option anglais/francais ? Deja presente (langue systeme) ;
+  bouton de bascule ajoute a cote du theme.
+- Vu sur la capture et corrige : `comfy` et `IA` (120 Go de modeles) colores comme des
+  builds parce que les modeles recents n'etaient pas *proposes* et que le treemap ne
+  colorait que le propose → le coeur garde maintenant les elements classes mais recents
+  (`recent = true` : couleur et `--explain`, jamais dans le script) ; legende en anglais
+  en dur (contraire a R14) → cles `legend.*` dans `locales/` ; total de section coupe
+  dans le panneau → mise en page corrigee.
+- Etat : commit 5 a faire par Alexandre ; etape 3 continue par la direction visuelle
+  (palette des categories, deux profondeurs d'affichage).
+
 ## 2026-10-16, spike iced ecrit (etape 3)
 
 - Fait par Claude : `crates/app` = l'application reelle sur le coeur reel (scan +

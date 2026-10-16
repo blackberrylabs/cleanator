@@ -30,5 +30,16 @@
   "theme.toggle": "Thème",
   "level.safe": "sûr",
   "level.review": "à vérifier",
-  "level.never": "jamais"
+  "level.never": "jamais",
+  "lang.toggle": "English",
+  "legend.model": "Modèles",
+  "legend.python-env": "Envs Python",
+  "legend.package-cache": "Caches de paquets",
+  "legend.build": "Builds",
+  "legend.docker": "Docker",
+  "legend.assistant-history": "Assistants IA",
+  "legend.backup": "Sauvegardes & archives",
+  "legend.git-reclonable": "Dépôts re-clonables",
+  "legend.system": "Système",
+  "panel.recent": "{n} éléments utilisés depuis moins de {days} jours sont classés mais non proposés"
 }

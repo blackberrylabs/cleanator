@@ -41,6 +41,7 @@ enum Message {
     CopyScript,
     SaveScript,
     ToggleTheme,
+    ToggleLang,
 }
 
 impl From<TreemapEvent> for Message {
@@ -56,6 +57,7 @@ enum Phase {
 }
 
 struct App {
+    lang: Lang,
     strings: Strings,
     dark: bool,
     root: PathBuf,
@@ -74,10 +76,12 @@ impl App {
             .nth(1)
             .map(PathBuf::from)
             .unwrap_or_else(|| env.home.clone());
-        let strings = Strings::load(Lang::from_env());
+        let lang = Lang::from_env();
+        let strings = Strings::load(lang);
         let status = strings.t("status.scanning", &[("path", &root.to_string_lossy())]);
         let dark = matches!(std::env::var("CLEANATOR_THEME").as_deref(), Ok("dark"));
         let app = App {
+            lang,
             strings,
             dark,
             root: root.clone(),
@@ -159,6 +163,7 @@ impl App {
                     for rec in &r.recommendations {
                         if rec.effective_level == Level::Safe
                             && rec.in_use.is_none()
+                            && !rec.recent
                             && rec.command.is_some()
                         {
                             self.selected.insert(rec.id.clone());
@@ -194,6 +199,28 @@ impl App {
                 }
             }
             Message::ToggleTheme => self.dark = !self.dark,
+            Message::ToggleLang => {
+                self.lang = if self.lang == Lang::Fr {
+                    Lang::En
+                } else {
+                    Lang::Fr
+                };
+                self.strings = Strings::load(self.lang);
+                if let (Some(scan), Some(report)) = (&self.scan, &self.report) {
+                    self.status = self.strings.t(
+                        "status.scanned",
+                        &[
+                            ("size", &human(scan.summary.total_size)),
+                            (
+                                "secs",
+                                &format!("{:.1}", scan.summary.duration_ms as f64 / 1000.0),
+                            ),
+                            ("rules", &report.rule_count.to_string()),
+                            ("dormancy", &report.dormancy_days.to_string()),
+                        ],
+                    );
+                }
+            }
         }
         Task::none()
     }
@@ -235,6 +262,9 @@ impl App {
         let footer = row![
             text(self.status.clone()).size(12).style(text::secondary),
             horizontal_space(),
+            button(text(self.t("lang.toggle")).size(12))
+                .style(button::text)
+                .on_press(Message::ToggleLang),
             button(text(self.t("theme.toggle")).size(12))
                 .style(button::text)
                 .on_press(Message::ToggleTheme),
@@ -366,7 +396,8 @@ impl App {
 
     fn view_legend(&self) -> Element<'_, Message> {
         let mut r = row![].spacing(14);
-        for (cat, label) in LEGEND {
+        for cat in LEGEND {
+            let label = self.strings.t(&format!("legend.{cat}"), &[]);
             r = r.push(
                 row![
                     container(Space::new(10, 10)).style(move |_: &Theme| container::Style {
@@ -377,7 +408,7 @@ impl App {
                         },
                         ..Default::default()
                     }),
-                    text(*label).size(11).style(text::secondary),
+                    text(label).size(11).style(text::secondary),
                 ]
                 .spacing(5)
                 .align_y(iced::Alignment::Center),
@@ -447,7 +478,7 @@ impl App {
             let recs: Vec<&Recommendation> = report
                 .recommendations
                 .iter()
-                .filter(|r| r.effective_level == level)
+                .filter(|r| r.effective_level == level && !r.recent)
                 .collect();
             if recs.is_empty() {
                 continue;
@@ -465,12 +496,12 @@ impl App {
             list = list.push(
                 row![
                     pill(label, level_color(level)),
-                    horizontal_space(),
                     text(human(total))
                         .size(12)
                         .font(iced::Font::MONOSPACE)
                         .style(text::secondary),
                 ]
+                .spacing(10)
                 .align_y(iced::Alignment::Center)
                 .padding(iced::Padding {
                     top: 10.0,
@@ -482,6 +513,21 @@ impl App {
             for r in recs.iter().take(400) {
                 list = list.push(self.view_rec(r));
             }
+        }
+
+        let recent_n = report.recommendations.iter().filter(|r| r.recent).count();
+        if recent_n > 0 {
+            list = list.push(
+                text(self.strings.t(
+                    "panel.recent",
+                    &[
+                        ("n", &recent_n.to_string()),
+                        ("days", &report.dormancy_days.to_string()),
+                    ],
+                ))
+                .size(11)
+                .style(text::secondary),
+            );
         }
 
         let selected_total: u64 = report
@@ -621,16 +667,17 @@ fn shorten(s: &str, max: usize) -> String {
     format!("{h}…{t}")
 }
 
-const LEGEND: &[(&str, &str)] = &[
-    ("model", "Models"),
-    ("python-env", "Python envs"),
-    ("package-cache", "Package caches"),
-    ("build", "Builds"),
-    ("docker", "Docker"),
-    ("assistant-history", "AI assistants"),
-    ("backup", "Backups & archives"),
-    ("git-reclonable", "Re-clonable repos"),
-    ("system", "System"),
+/// Legend categories; labels come from `locales/*.json` (`legend.<category>`).
+const LEGEND: &[&str] = &[
+    "model",
+    "python-env",
+    "package-cache",
+    "build",
+    "docker",
+    "assistant-history",
+    "backup",
+    "git-reclonable",
+    "system",
 ];
 
 fn category_color(cat: &str) -> Color {

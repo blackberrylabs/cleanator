@@ -44,7 +44,7 @@ fn selected<'a>(report: &'a Report, opts: &ScriptOptions) -> Vec<&'a Recommendat
     report
         .recommendations
         .iter()
-        .filter(|r| r.command.is_some() && r.effective_level != Level::Never)
+        .filter(|r| r.command.is_some() && r.effective_level != Level::Never && !r.recent)
         .filter(|r| opts.include_in_use || r.in_use.is_none())
         .filter(|r| match &opts.selection {
             Selection::Safe => r.effective_level == Level::Safe,
@@ -186,6 +186,7 @@ mod tests {
             cleanup_kind: CleanupKind::Rm,
             requires: requires.into(),
             in_use: in_use.map(str::to_string),
+            recent: false,
             source_url: "u".into(),
             source_to_verify: false,
         }

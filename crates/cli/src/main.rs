@@ -214,7 +214,7 @@ fn print_report(report: &Report, explain: bool) {
         let items: Vec<_> = report
             .recommendations
             .iter()
-            .filter(|r| r.effective_level == level)
+            .filter(|r| r.effective_level == level && !r.recent)
             .collect();
         if items.is_empty() {
             continue;
@@ -246,6 +246,22 @@ fn print_report(report: &Report, explain: bool) {
         println!();
     }
     if explain {
+        let recent: Vec<_> = report.recommendations.iter().filter(|r| r.recent).collect();
+        println!(
+            "-- recent ({} items classified but used within {} days, not proposed) --",
+            recent.len(),
+            report.dormancy_days
+        );
+        for r in recent.iter().take(60) {
+            println!(
+                "{:>8}  {:<28} {}  (last used {})",
+                human(r.size),
+                r.rule_id,
+                r.display,
+                date(r.last_used)
+            );
+        }
+        println!();
         let never: Vec<_> = report
             .recommendations
             .iter()

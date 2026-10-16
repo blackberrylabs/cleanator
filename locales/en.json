@@ -30,5 +30,16 @@
   "theme.toggle": "Theme",
   "level.safe": "safe",
   "level.review": "review",
-  "level.never": "never"
+  "level.never": "never",
+  "lang.toggle": "Français",
+  "legend.model": "Models",
+  "legend.python-env": "Python envs",
+  "legend.package-cache": "Package caches",
+  "legend.build": "Builds",
+  "legend.docker": "Docker",
+  "legend.assistant-history": "AI assistants",
+  "legend.backup": "Backups & archives",
+  "legend.git-reclonable": "Re-clonable repos",
+  "legend.system": "System",
+  "panel.recent": "{n} items used in the last {days} days are classified but not proposed"
 }

@@ -59,6 +59,9 @@ pub struct Recommendation {
     pub requires: String,
     /// Why the item is in use and therefore not proposed, when it is.
     pub in_use: Option<String>,
+    /// Classified, but used within the dormancy window: shown (treemap colour, `--explain`)
+    /// and never proposed in the script.
+    pub recent: bool,
     pub source_url: String,
     pub source_to_verify: bool,
 }
@@ -214,6 +217,7 @@ pub fn classify(scan: &Scan, rules: &RuleSet, env: &Env, opts: &ClassifyOptions)
     recommendations.sort_by(|a, b| {
         a.effective_level
             .cmp(&b.effective_level)
+            .then_with(|| a.recent.cmp(&b.recent))
             .then_with(|| a.in_use.is_some().cmp(&b.in_use.is_some()))
             .then_with(|| b.reclaimable.cmp(&a.reclaimable))
             .then_with(|| a.id.cmp(&b.id))
@@ -221,6 +225,10 @@ pub fn classify(scan: &Scan, rules: &RuleSet, env: &Env, opts: &ClassifyOptions)
 
     let mut totals = Totals::default();
     for r in &recommendations {
+        if r.recent {
+            *totals.counts.entry("recent".to_string()).or_default() += 1;
+            continue;
+        }
         *totals
             .counts
             .entry(r.effective_level.to_string())
@@ -686,10 +694,11 @@ fn finish(
 
     // Dormancy: review rules skip recent items; safe rules raise their level on active
     // projects when they say so.
+    let mut recent_item = false;
     if let Some(window) = window {
         let recent = cand.last_used.is_some_and(|t| opts.now - t < window);
         match rule.level {
-            Level::Review if recent => return None,
+            Level::Review if recent => recent_item = true,
             Level::Safe => {
                 if let (Some(active_level), Some(project)) =
                     (cond.active_project_level, &cand.project)
@@ -777,6 +786,7 @@ fn finish(
         cleanup_kind: rule.cleanup.kind,
         requires,
         in_use,
+        recent: recent_item,
         source_url: rule.source.url.clone(),
         source_to_verify: rule.source_to_verify(),
     })
@@ -1036,7 +1046,10 @@ mod tests {
             Some(home.join("dormant").to_str().unwrap())
         );
 
-        let venvs = by_rule("python-venv");
+        let venvs: Vec<_> = by_rule("python-venv")
+            .into_iter()
+            .filter(|r| !r.recent)
+            .collect();
         assert_eq!(
             venvs.len(),
             1,
@@ -1045,13 +1058,18 @@ mod tests {
         assert!(venvs[0].path.as_deref().unwrap().ends_with("venvs/old"));
 
         let loose = by_rule("loose-model-files");
+        assert_eq!(loose.len(), 2, "both models are classified: {loose:?}");
+        let proposed: Vec<_> = loose.iter().filter(|r| !r.recent).collect();
         assert_eq!(
-            loose.len(),
+            proposed.len(),
             1,
-            "the model loaded today is not proposed: {loose:?}"
+            "the model loaded today is classified but not proposed"
         );
-        assert!(loose[0].display.ends_with("qwen.safetensors"));
-        assert_eq!(loose[0].effective_level, Level::Review);
+        assert!(proposed[0].display.ends_with("qwen.safetensors"));
+        assert!(loose
+            .iter()
+            .any(|r| r.recent && r.display.ends_with("fresh.safetensors")));
+        assert_eq!(proposed[0].effective_level, Level::Review);
 
         // one owner per path: the archive is a backup first, never an "archive" too, and
         // the catch-all never re-lists classified files

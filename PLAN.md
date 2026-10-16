@@ -93,8 +93,8 @@ du script) en statique, valides visuellement ; `locales/` complets en `en` et `f
 
 - [x] Spike : iced 0.13.1, treemap au canvas, liste avec cases, theme clair/sombre, i18n —
       ecrit et compile le 2026-10-16, a juger a l'ecran
-- [ ] Decision d'Alexandre sur le spike (entree JOURNAL) — si non : retour a Tauri + React,
-      le coeur ne change pas
+- [x] Decision d'Alexandre sur le spike : « pour un premier jet, c'est plutot pas mal »
+      (2026-10-16, deux captures) — iced confirme
 - [ ] Direction visuelle (reference Sniffnet : cartes nettes, couleurs par categorie) et
       palette des categories
 - [ ] Ecrans statiques sur donnees fictives, deux profondeurs d'affichage (`docs/rules.md`)
@@ -116,7 +116,8 @@ testes sur la machine de dev.
 Resultat visible attendu : README anglais avec captures, section « why not Baobab / ncdu /
 BleachBit » verifiee, `CONTRIBUTING.md`, `docs/rules.md`.
 
-- [ ] Reverifier les outils existants cites au BRIEF §4
+- [ ] Reverifier les outils existants cites au BRIEF §4, plus `cleanr` (crates.io, v0.17,
+      outil de nettoyage en Rust) et `clean-rs`
 - [ ] Captures d'ecran reelles (treemap, assistants, script)
 - [ ] README, CONTRIBUTING, docs
 - [ ] Partage (a decider : Reddit r/linux, Hacker News, LinkedIn) — accord d'Alexandre
