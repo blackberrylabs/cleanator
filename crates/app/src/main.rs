@@ -369,7 +369,73 @@ impl App {
                 .on_press(Message::ToggleTheme),
         ]
         .align_y(iced::Alignment::Center);
-        column![header, body, footer].spacing(14).padding(16).into()
+        let mut page = column![header].spacing(14).padding(16);
+        if let Some(notice) = self.view_atime_notice() {
+            page = page.push(notice);
+        }
+        page.push(body).push(footer).into()
+    }
+
+    /// One line when access times could not be trusted (0.1.1 design, D4): what was
+    /// found, what it changed, what to do.
+    fn view_atime_notice(&self) -> Option<Element<'_, Message>> {
+        let report = self.report.as_ref()?;
+        let a = &report.atime;
+        let mut lines: Vec<String> = Vec::new();
+        if a.unknown_items > 0 {
+            lines.push(self.strings.t(
+                "atime.noatime",
+                &[
+                    ("n", &a.unknown_items.to_string()),
+                    ("size", &human(a.unknown_size)),
+                    ("mounts", &a.noatime_mounts.join(", ")),
+                ],
+            ));
+        }
+        if let (Some(m), Some(until)) = (a.mass_read, a.deferred_until) {
+            if a.deferred_items > 0 {
+                lines.push(self.strings.t(
+                    "atime.mass_read",
+                    &[
+                        ("day", &ymd(m.day)),
+                        ("n", &a.deferred_items.to_string()),
+                        ("size", &human(a.deferred_size)),
+                        ("until", &ymd(until)),
+                    ],
+                ));
+            }
+        }
+        if lines.is_empty() {
+            return None;
+        }
+        let dot = swatch(level_color(Level::Review, self.dark), 8);
+        let mut col = column![].spacing(2);
+        for l in lines {
+            col = col.push(text(l).size(12));
+        }
+        Some(
+            container(row![dot, col].spacing(10).align_y(iced::Alignment::Center))
+                .padding(iced::Padding {
+                    top: 8.0,
+                    right: 14.0,
+                    bottom: 8.0,
+                    left: 14.0,
+                })
+                .width(Length::Fill)
+                .style(|theme: &Theme| {
+                    let p = theme.extended_palette();
+                    container::Style {
+                        background: Some(Background::Color(p.background.weak.color)),
+                        border: Border {
+                            radius: 8.0.into(),
+                            width: 1.0,
+                            color: p.background.strong.color,
+                        },
+                        ..Default::default()
+                    }
+                })
+                .into(),
+        )
     }
 
     /// Shown while the background thread walks the disk, then applies the rules: what is
@@ -968,7 +1034,11 @@ impl App {
             }
         }
 
-        let recent_n = report.recommendations.iter().filter(|r| r.recent).count();
+        let recent_n = report
+            .recommendations
+            .iter()
+            .filter(|r| r.recent && r.atime_caveat.is_none())
+            .count();
         if recent_n > 0 {
             list = list.push(
                 text(self.strings.t(

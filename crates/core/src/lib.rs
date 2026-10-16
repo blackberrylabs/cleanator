@@ -6,6 +6,7 @@
 //! - **R10 bis** only metadata is read (names, sizes, dates, inodes), never file contents.
 #![forbid(unsafe_code)]
 
+pub mod atime;
 pub mod classify;
 pub mod exec;
 pub mod inuse;

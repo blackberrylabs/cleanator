@@ -187,6 +187,7 @@ mod tests {
             requires: requires.into(),
             in_use: in_use.map(str::to_string),
             recent: false,
+            atime_caveat: None,
             source_url: "u".into(),
             source_to_verify: false,
         }
@@ -214,6 +215,7 @@ mod tests {
             recommendations: recs,
             probes: vec![],
             rule_notes: vec![],
+            atime: Default::default(),
         }
     }
 

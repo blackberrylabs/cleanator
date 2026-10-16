@@ -7,6 +7,38 @@ titre, ce qui a ete decide, par qui, ce qui a ete ecarte, et la preuve (fichier,
 
 ---
 
+## 2026-10-16, dormance robuste codee (D1–D5)
+
+- Alexandre : « je valide et je suis ta recommandation » (D2 strict).
+- Fait par Claude : module `crates/core/src/atime.rs` (lecture de `/proc/mounts` avec
+  decodage des `\040`, montage le plus long prefixe, `noatime` ; detection du jour de
+  lecture massive : ≥ 40 % et ≥ 200 des gros fichiers hors dossiers de build, hors
+  aujourd'hui/hier). Classifieur : pour les regles `review` mesurees en atime, `noatime` →
+  dernier usage `None`, `recent = true` (jamais propose), note ; jour massif → note avec la
+  date a partir de laquelle l'element sera propose, `recent` tant que ce jour a moins de 60
+  jours. `Recommendation.atime_caveat`, `Report.atime` (montages, jour, totaux inconnus et
+  differes). CLI : deux notes en tete, section « access time not trusted » dans `--explain`.
+  App : bandeau sous les KPI (cles `atime.noatime`, `atime.mass_read`), la note « recents »
+  du panneau n'y compte plus ces elements. Tests : montages et jour massif injectes via
+  `ClassifyOptions.atime` (3 tests classifieur + 3 tests module) ; 29 verts.
+- A verifier sur la machine d'Alexandre : son disque est en `relatime` (pas de bandeau
+  noatime attendu) ; le 2026-09-02 devrait etre detecte comme jour de lecture massive si
+  ≥ 40 % des gros fichiers portent encore cet atime → bandeau « proposes a partir du
+  2026-11-01 ».
+
+## 2026-10-16, etape 6 ouverte : 0.1.1 courte avant le texte de presentation
+
+- Alexandre : liste du JOURNAL et texte de presentation expliques ; question « plus
+  judicieux de faire une 0.1.1 d'abord ? » → recommandation de Claude : oui, courte, limitee
+  a ce que voit la premiere vague de lecteurs (dormance robuste, SHA256SUMS, chargement) plus
+  un usage reel de l'outil par Alexandre pour avoir un chiffre vrai ; `.rpm` Fedora, commits
+  non pousses et doublons en 0.2. « Oui, je valide, tu peux y aller. »
+- Fait par Claude : etape 6 dans PLAN.md avec la conception de la dormance (D1 options de
+  montage, D2 noatime → non propose, D3 jour de lecture massive → dormant seulement si ce
+  jour a plus de 60 jours, avec date affichee, D4 affichage, D5 tests), a valider avant le
+  code. Un choix ouvert pour Alexandre : D2 strict (R2) ou proposer en review avec
+  avertissement.
+
 ## 2026-10-16, etape 5 close — 0.1.0 complete
 
 - Alexandre a pousse les commits 13 et 14 ; verifie depuis le cloud : `origin/main` =

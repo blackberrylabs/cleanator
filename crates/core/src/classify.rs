@@ -11,6 +11,7 @@ use std::path::{Path, PathBuf};
 use globset::{Glob, GlobSet, GlobSetBuilder};
 use serde::Serialize;
 
+use crate::atime::{AtimeContext, AtimeReport};
 use crate::exec::installed;
 use crate::inuse::Activity;
 use crate::paths::{contains_fragment, expand_braces, shell_quote, Env};
@@ -62,8 +63,21 @@ pub struct Recommendation {
     /// Classified, but used within the dormancy window: shown (treemap colour, `--explain`)
     /// and never proposed in the script.
     pub recent: bool,
+    /// Why the last-use date cannot be trusted, when it cannot: `noatime` (last use
+    /// unknown, never proposed) or the mass-read day (proposed only once that day is older
+    /// than the window). Such items are also `recent`.
+    pub atime_caveat: Option<AtimeCaveat>,
     pub source_url: String,
     pub source_to_verify: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum AtimeCaveat {
+    /// Filesystem mounted `noatime`: reads are never recorded.
+    Noatime,
+    /// Last read on the day most of the disk was read at once.
+    MassRead,
 }
 
 #[derive(Debug, Clone, Default, Serialize)]
@@ -90,6 +104,8 @@ pub struct Report {
     pub probes: Vec<ProbeSummary>,
     /// Rules that produced nothing and why (for `--explain`).
     pub rule_notes: Vec<String>,
+    /// Whether access times could be trusted, and what it changed.
+    pub atime: AtimeReport,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -106,6 +122,9 @@ pub struct ClassifyOptions {
     pub run_probes: bool,
     pub in_use_checks: bool,
     pub now: i64,
+    /// Access-time context (mounts, mass-read day). `None` detects it from the system and
+    /// the scan; tests inject one.
+    pub atime: Option<AtimeContext>,
 }
 
 impl Default for ClassifyOptions {
@@ -115,6 +134,7 @@ impl Default for ClassifyOptions {
             run_probes: true,
             in_use_checks: true,
             now: chrono::Utc::now().timestamp(),
+            atime: None,
         }
     }
 }
@@ -149,6 +169,10 @@ pub fn classify(scan: &Scan, rules: &RuleSet, env: &Env, opts: &ClassifyOptions)
     };
     let managed = managed_store_paths(rules, env);
     let sudo_for_docker = !in_docker_group();
+    let atime_ctx = opts
+        .atime
+        .clone()
+        .unwrap_or_else(|| AtimeContext::detect(scan, opts.now));
 
     let mut recommendations = Vec::new();
     let mut probe_summaries = Vec::new();
@@ -207,7 +231,15 @@ pub fn classify(scan: &Scan, rules: &RuleSet, env: &Env, opts: &ClassifyOptions)
                 }
                 newly_claimed.push(p.clone());
             }
-            if let Some(rec) = finish(rule, cand, scan, &activity, opts, sudo_for_docker) {
+            if let Some(rec) = finish(
+                rule,
+                cand,
+                scan,
+                &activity,
+                opts,
+                &atime_ctx,
+                sudo_for_docker,
+            ) {
                 recommendations.push(rec);
             }
         }
@@ -244,6 +276,36 @@ pub fn classify(scan: &Scan, rules: &RuleSet, env: &Env, opts: &ClassifyOptions)
         }
     }
 
+    let mut atime = AtimeReport {
+        mass_read: atime_ctx.mass_read,
+        ..Default::default()
+    };
+    let mut noatime_mounts = BTreeSet::new();
+    for r in &recommendations {
+        match r.atime_caveat {
+            Some(AtimeCaveat::Noatime) => {
+                atime.unknown_items += 1;
+                atime.unknown_size += r.size;
+                if let Some(p) = &r.path {
+                    if let Some(m) = atime_ctx.noatime_mount(Path::new(p)) {
+                        noatime_mounts.insert(m.to_string_lossy().to_string());
+                    }
+                }
+            }
+            Some(AtimeCaveat::MassRead) => {
+                atime.deferred_items += 1;
+                atime.deferred_size += r.size;
+            }
+            None => {}
+        }
+    }
+    atime.noatime_mounts = noatime_mounts.into_iter().collect();
+    if atime.deferred_items > 0 {
+        atime.deferred_until = atime_ctx
+            .mass_read
+            .map(|m| m.day + opts.dormancy_days as i64 * 86_400);
+    }
+
     Report {
         cleanator_version: crate::VERSION.to_string(),
         generated_at: chrono::Utc::now().to_rfc3339(),
@@ -256,6 +318,7 @@ pub fn classify(scan: &Scan, rules: &RuleSet, env: &Env, opts: &ClassifyOptions)
         recommendations,
         probes: probe_summaries,
         rule_notes,
+        atime,
     }
 }
 
@@ -653,6 +716,7 @@ fn finish(
     scan: &Scan,
     activity: &Activity,
     opts: &ClassifyOptions,
+    atime_ctx: &AtimeContext,
     sudo_for_docker: bool,
 ) -> Option<Recommendation> {
     let cond = rule.conditions.clone().unwrap_or_default();
@@ -666,6 +730,11 @@ fn finish(
     }
 
     // Last use according to the rule's measure.
+    let mut atime_caveat: Option<AtimeCaveat> = None;
+    let measured_by_atime = cond
+        .dormancy_measure
+        .as_deref()
+        .is_some_and(|m| m.starts_with("atime"));
     if let Some(measure) = cond.dormancy_measure.as_deref() {
         if let Some(rel) = measure.strip_prefix("atime:") {
             if let Some(p) = &cand.path {
@@ -692,9 +761,46 @@ fn finish(
         }
     }
 
+    // Can the access time be trusted? (D1–D3 of the 0.1.1 design.)
+    if measured_by_atime && rule.level == Level::Review {
+        if let Some(p) = &cand.path {
+            if let Some(mount) = atime_ctx.noatime_mount(p) {
+                // Reads are never recorded here: the last use is unknown, and unknown is
+                // not proposed (R2). The date shown would be the copy date; drop it.
+                atime_caveat = Some(AtimeCaveat::Noatime);
+                cand.last_used = None;
+                notes.push(format!(
+                    "last use unknown: {} is mounted noatime, so reads are never recorded \
+                     — shown, not proposed",
+                    mount.display()
+                ));
+            }
+        }
+        if atime_caveat.is_none() {
+            if let (Some(mass), Some(t), Some(window)) =
+                (atime_ctx.mass_read, cand.last_used, window)
+            {
+                if mass.covers(t) && opts.now - mass.day < window {
+                    // Read along with most of the disk that day: no evidence of use since
+                    // then, nor of non-use before. Dormant only once that day is old enough.
+                    atime_caveat = Some(AtimeCaveat::MassRead);
+                    notes.push(format!(
+                        "last read on {}, the day most of this disk was read at once \
+                         ({} of {} large files); real last use unknown — proposed from {} \
+                         unless used",
+                        crate::size::ymd(mass.day),
+                        mass.files,
+                        mass.total,
+                        crate::size::ymd(mass.day + window)
+                    ));
+                }
+            }
+        }
+    }
+
     // Dormancy: review rules skip recent items; safe rules raise their level on active
     // projects when they say so.
-    let mut recent_item = false;
+    let mut recent_item = atime_caveat == Some(AtimeCaveat::Noatime);
     if let Some(window) = window {
         let recent = cand.last_used.is_some_and(|t| opts.now - t < window);
         match rule.level {
@@ -787,6 +893,7 @@ fn finish(
         requires,
         in_use,
         recent: recent_item,
+        atime_caveat,
         source_url: rule.source.url.clone(),
         source_to_verify: rule.source_to_verify(),
     })
@@ -980,6 +1087,184 @@ mod tests {
         tmp
     }
 
+    /// `qwen.safetensors` is 120 days old (dormant), `fresh.safetensors` was read today.
+    fn report_with_atime(home: &Path, env: &Env, ctx: AtimeContext) -> Report {
+        let scan = scan(
+            home,
+            ScanOptions {
+                big_file_threshold: 1_000_000,
+                one_filesystem: true,
+                progress: None,
+            },
+        )
+        .unwrap();
+        let rules = RuleSet::embedded().unwrap();
+        let copts = ClassifyOptions {
+            dormancy_days: 60,
+            run_probes: false,
+            in_use_checks: false,
+            atime: Some(ctx),
+            ..Default::default()
+        };
+        classify(&scan, &rules, env, &copts)
+    }
+
+    #[test]
+    fn noatime_mount_makes_last_use_unknown_and_never_proposed() {
+        let tmp = fake_home();
+        let home = tmp.path();
+        let env = Env::with_home(home);
+        let mounts = crate::atime::parse_mounts(&format!(
+            "/dev/a / ext4 rw,relatime 0 0\n/dev/b {} ext4 rw,noatime 0 0\n",
+            home.display()
+        ));
+        let report = report_with_atime(
+            home,
+            &env,
+            AtimeContext {
+                mounts,
+                mass_read: None,
+            },
+        );
+        let loose: Vec<_> = report
+            .recommendations
+            .iter()
+            .filter(|r| r.rule_id == "loose-model-files")
+            .collect();
+        assert_eq!(loose.len(), 2, "still classified: {loose:?}");
+        for r in &loose {
+            assert_eq!(r.atime_caveat, Some(AtimeCaveat::Noatime));
+            assert!(r.recent, "never proposed");
+            assert_eq!(r.last_used, None, "no misleading copy date");
+            assert!(r.notes.as_deref().unwrap().contains("noatime"));
+        }
+        assert_eq!(
+            report.atime.unknown_items,
+            loose.len() + 2,
+            "models + both venvs"
+        );
+        assert_eq!(
+            report.atime.noatime_mounts,
+            vec![home.to_string_lossy().to_string()]
+        );
+        // mtime-measured rules are untouched
+        assert!(report
+            .recommendations
+            .iter()
+            .any(|r| r.rule_id == "node-modules" && !r.recent));
+    }
+
+    #[test]
+    fn mass_read_day_defers_instead_of_dating() {
+        let tmp = fake_home();
+        let home = tmp.path();
+        let env = Env::with_home(home);
+        // Everything was "read" 30 days ago by an indexer: the dormant model's atime too.
+        let now = chrono::Utc::now().timestamp();
+        let indexer_day = now - 30 * 86_400;
+        let t = std::time::UNIX_EPOCH + std::time::Duration::from_secs(indexer_day as u64);
+        let qwen = home.join("comfy/models/qwen.safetensors");
+        fs::File::open(&qwen)
+            .unwrap()
+            .set_times(fs::FileTimes::new().set_accessed(t))
+            .unwrap();
+        let mass = crate::atime::MassRead {
+            day: crate::atime::day_of(indexer_day),
+            files: 400,
+            total: 500,
+        };
+        let report = report_with_atime(
+            home,
+            &env,
+            AtimeContext {
+                mounts: Vec::new(),
+                mass_read: Some(mass),
+            },
+        );
+        let q = report
+            .recommendations
+            .iter()
+            .find(|r| r.path.as_deref() == Some(qwen.to_str().unwrap()))
+            .expect("qwen classified");
+        assert_eq!(q.atime_caveat, Some(AtimeCaveat::MassRead));
+        assert!(
+            q.recent,
+            "not proposed until the mass-read day is 60 days old"
+        );
+        let note = q.notes.as_deref().unwrap();
+        assert!(note.contains("most of this disk was read"), "{note}");
+        assert!(note.contains(&crate::size::ymd(mass.day + 60 * 86_400)));
+        assert_eq!(report.atime.deferred_items, 1);
+        assert_eq!(report.atime.deferred_until, Some(mass.day + 60 * 86_400));
+        // A mass read older than the window changes nothing: the item is simply dormant.
+        let old = crate::atime::MassRead {
+            day: crate::atime::day_of(now - 90 * 86_400),
+            ..mass
+        };
+        fs::File::open(&qwen)
+            .unwrap()
+            .set_times(fs::FileTimes::new().set_accessed(
+                std::time::UNIX_EPOCH + std::time::Duration::from_secs(old.day as u64 + 10),
+            ))
+            .unwrap();
+        let report = report_with_atime(
+            home,
+            &env,
+            AtimeContext {
+                mounts: Vec::new(),
+                mass_read: Some(old),
+            },
+        );
+        let q = report
+            .recommendations
+            .iter()
+            .find(|r| r.path.as_deref() == Some(qwen.to_str().unwrap()))
+            .unwrap();
+        assert_eq!(q.atime_caveat, None);
+        assert!(!q.recent, "dormant and proposed");
+    }
+
+    #[test]
+    fn detects_a_mass_read_day_in_a_scan() {
+        let tmp = tempfile::tempdir().unwrap();
+        let h = tmp.path();
+        let now = chrono::Utc::now().timestamp();
+        let day = crate::atime::day_of(now - 20 * 86_400);
+        for i in 0..250 {
+            let p = h.join(format!("data/f{i}.bin"));
+            write(&p, 1_000_001);
+            let secs = if i < 220 {
+                day + 3600
+            } else {
+                now - 5 * 86_400
+            };
+            fs::File::open(&p)
+                .unwrap()
+                .set_times(fs::FileTimes::new().set_accessed(
+                    std::time::UNIX_EPOCH + std::time::Duration::from_secs(secs as u64),
+                ))
+                .unwrap();
+        }
+        // build directories do not count
+        for i in 0..100 {
+            let p = h.join(format!("proj/node_modules/g{i}.bin"));
+            write(&p, 1_000_001);
+        }
+        let scan = scan(
+            h,
+            ScanOptions {
+                big_file_threshold: 1_000_000,
+                one_filesystem: true,
+                progress: None,
+            },
+        )
+        .unwrap();
+        let m = crate::atime::detect_mass_read(&scan, now).expect("mass read detected");
+        assert_eq!(m.day, day);
+        assert_eq!(m.files, 220);
+        assert_eq!(m.total, 250);
+    }
+
     #[test]
     fn classifies_one_case_per_level() {
         let tmp = fake_home();
@@ -1144,7 +1429,17 @@ mod tests {
         };
         let recs: Vec<Recommendation> = cands
             .into_iter()
-            .filter_map(|c| finish(rule, c, &scan, &activity, &opts, false))
+            .filter_map(|c| {
+                finish(
+                    rule,
+                    c,
+                    &scan,
+                    &activity,
+                    &opts,
+                    &AtimeContext::default(),
+                    false,
+                )
+            })
             .collect();
         let old = recs
             .iter()
@@ -1180,7 +1475,17 @@ mod tests {
         };
         let recs: Vec<Recommendation> = cands
             .into_iter()
-            .filter_map(|c| finish(rule, c, &scan, &activity, &opts, false))
+            .filter_map(|c| {
+                finish(
+                    rule,
+                    c,
+                    &scan,
+                    &activity,
+                    &opts,
+                    &AtimeContext::default(),
+                    false,
+                )
+            })
             .collect();
         assert!(!recs.is_empty());
         assert!(recs.iter().all(|r| r.in_use.is_none()), "{recs:?}");

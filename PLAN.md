@@ -145,5 +145,62 @@ BleachBit » verifiee, `CONTRIBUTING.md`, `docs/rules.md`.
       Gradle, hors sujet) — tableau dans le README
 - [x] Captures d'ecran reelles en anglais (explorateur clair et sombre, assistants,
       recommandation depliee), recadrees sur la fenetre, `docs/screenshots/` — 2026-10-16
-- [ ] README, CONTRIBUTING, docs
-- [ ] Partage (a decider : Reddit r/linux, Hacker News, LinkedIn) — accord d'Alexandre
+- [x] README (captures, comparatif verifie, section Rust), CONTRIBUTING, docs/rules.md,
+      CHANGELOG, About GitHub (description, 14 topics) — 2026-10-16
+- [→] Partage (texte de presentation r/rust, r/linux, Show HN) : reporte apres la 0.1.1,
+      decision d'Alexandre du 2026-10-16 — voir etape 6
+
+## Etape 6. Version 0.1.1 — dormance robuste et usage reel (ouverte le 2026-10-16)
+
+Resultat visible attendu : release 0.1.1 ; aucune recommandation fondee sur une date
+d'acces non fiable ; `SHA256SUMS` propre ; ecran de chargement vu ; Alexandre a nettoye son
+disque avec l'outil et le resultat est consigne. Perimetre valide par Alexandre le
+2026-10-16 (« une 0.1.1 courte ») ; `.rpm` Fedora, commits non pousses et doublons vont en 0.2.
+
+### Conception de la dormance (a valider par Alexandre avant le code)
+
+Constat. Sept regles de modeles et quatre d'environnements Python mesurent le dernier usage
+par la date d'acces (atime). Deux cas la rendent fausse :
+- **`noatime`** : le systeme de fichiers n'enregistre jamais les lectures ; l'atime reste a
+  la date de copie. Un modele utilise hier parait dormant depuis des mois → risque de
+  proposer quelque chose d'utilise (le mauvais sens).
+- **Lecture massive** : un indexeur, une sauvegarde ou un antivirus lit tout le disque un
+  jour donne (chez Alexandre : le 2026-09-02) ; tous les atimes tombent ce jour-la. Les
+  modeles paraissent recents → rien n'est propose (le sens sur, mais l'outil ment sur
+  « dernier usage »).
+Le defaut Linux `relatime` est fiable pour une fenetre de 60 jours (l'atime est mis a jour
+des qu'il a plus de 24 h).
+
+D1. **Lire les options de montage** (`/proc/mounts`, point de montage le plus long prefixe
+    du chemin) pour la racine scannee et pour chaque chemin mesure en atime. `noatime` →
+    atime non fiable ; `relatime` / `strictatime` → fiable. Fonction pure, testee sur un
+    extrait de `/proc/mounts`.
+D2. **Sous `noatime`**, pour les regles mesurees en atime : dernier usage = « inconnu ».
+    Recommandation : l'element est classe et affiche (treemap, onglets) mais **non propose**
+    (regle R2 : inconnu = pas de proposition), avec la note « last use unknown: filesystem
+    mounted noatime ». Un message en tete (app et CLI) donne le total concerne et la cause.
+    Variante ecartee par Claude, a confirmer par Alexandre : proposer quand meme en `review`
+    avec l'avertissement — plus utile sur les machines `noatime`, mais contraire a R2.
+D3. **Detecter la lecture massive** : apres le scan, compter par jour les atimes des gros
+    fichiers (hors dossiers de build) ; si un jour autre qu'aujourd'hui ou hier porte au
+    moins 40 % d'entre eux et au moins 200 fichiers, c'est une lecture massive. Pour un
+    element dont l'atime tombe ce jour-la, le vrai dernier usage est quelque part entre sa
+    date de modification et ce jour : il n'est dormant que si **ce jour-la** a plus de 60
+    jours. L'outil le dit : « last read on 2026-09-02, the day most of this disk was read;
+    real last use unknown; proposed from 2026-11-01 unless used ». Pas de recuperation
+    d'espace immediate, mais une information vraie et une date.
+D4. **Affichage** : une ligne sous les KPI (app) et en tete de `recommend` (CLI) quand D2 ou
+    D3 s'applique, chiffres a l'appui ; `--explain` liste les elements concernes. Cles i18n.
+D5. **Tests** : options de montage et jour de lecture massive injectables dans
+    `ClassifyOptions` pour les tests ; detection D3 testee sur un arbre fictif ; D1 testee sur
+    une chaine `/proc/mounts`.
+
+- [x] Conception D1–D5 validee par Alexandre, D2 strict (« je suis ta recommandation ») — 2026-10-16
+- [x] Code + tests (coeur : module `atime`, 29 tests verts, clippy propre), affichage (app :
+      bandeau sous les KPI ; CLI : notes + `--explain`), locales, `docs/rules.md` — commit 15
+- [ ] `SHA256SUMS` propre a la reconstruction (script deja corrige, a constater)
+- [ ] Ecran de chargement vu a l'oeil par Alexandre (`cleanator /`)
+- [ ] Usage reel par Alexandre : « Select safe », lecture du script, execution, resultat
+      consigne (espace libere, incidents eventuels)
+- [ ] CHANGELOG 0.1.1, tag, release (push et release sur accord)
+- [ ] Texte de presentation (r/rust, r/linux, Show HN) — apres la release

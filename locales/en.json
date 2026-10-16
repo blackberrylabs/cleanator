@@ -48,6 +48,8 @@
   "detail.cost": "cost",
   "detail.rule": "rule",
   "detail.observed": "observed on a real machine, not documented by the vendor",
+  "atime.noatime": "Last use unknown for {n} items ({size}): {mounts} is mounted noatime, so reads are never recorded. Shown, not proposed. Mount with relatime to enable.",
+  "atime.mass_read": "On {day} most of this disk was read at once (an indexer or a backup). {n} items ({size}) were last read that day; their real last use is unknown. Proposed from {until} unless used.",
   "detail.docs": "docs ↗",
   "tabs.explorer": "Explorer",
   "tabs.assistants": "AI assistants",

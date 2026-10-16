@@ -70,6 +70,22 @@ ignore dormancy unless they set one (caches of a session that just ended, for in
 `dormancy_measure = "atime"` uses the last access (for a model: the last time it was
 loaded), `"mtime"` the last modification, `"atime:bin/python"` a specific file's access.
 
+Access times are evidence only when the filesystem records them. Two checks protect
+atime-measured `review` rules (since 0.1.1):
+
+- **`noatime` mount** (read from `/proc/mounts`): reads are never recorded, so the last use
+  is *unknown*. The item is classified and shown but never proposed, with a note naming the
+  mount; the report header says how many items and bytes are concerned. Unknown is not
+  proposed (project rule R2).
+- **Mass-read day**: when one day other than today or yesterday holds at least 40 % of the
+  large files' access times (and at least 200 of them), something read most of the disk at
+  once — an indexer, a backup, an antivirus. An item last read that day has a real last use
+  somewhere between its modification and that day, so it is dormant only once *that day* is
+  older than the window. The note says so and gives the date it becomes proposable.
+
+The Linux default `relatime` is reliable for a window of weeks: the access time is updated
+as soon as it is more than a day old.
+
 ## Sources
 
 Every rule cites where its knowledge comes from. `source.url` is the documentation page

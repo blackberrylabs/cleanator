@@ -180,6 +180,34 @@ fn date(ts: Option<i64>) -> String {
         .unwrap_or_else(|| "—".into())
 }
 
+/// Header lines when access times could not be trusted (design D4).
+fn print_atime(a: &cleanator_core::atime::AtimeReport) {
+    if a.unknown_items > 0 {
+        println!(
+            "note: {} items ({}) have an unknown last use: {} mounted noatime, so reads are \
+             never recorded. Shown, not proposed. Mount with relatime to enable.",
+            a.unknown_items,
+            human(a.unknown_size),
+            a.noatime_mounts.join(", ")
+        );
+    }
+    if let (Some(m), Some(until)) = (a.mass_read, a.deferred_until) {
+        if a.deferred_items > 0 {
+            println!(
+                "note: on {} most of this disk was read at once ({} of {} large files — an \
+                 indexer or a backup). {} items ({}) were last read that day; their real \
+                 last use is unknown. Proposed from {} unless used.",
+                cleanator_core::size::ymd(m.day),
+                m.files,
+                m.total,
+                a.deferred_items,
+                human(a.deferred_size),
+                cleanator_core::size::ymd(until)
+            );
+        }
+    }
+}
+
 fn print_report(report: &Report, explain: bool) {
     let t = &report.totals;
     println!("== Cleanator — {} ==", report.root.display());
@@ -191,6 +219,7 @@ fn print_report(report: &Report, explain: bool) {
         human(t.in_use),
         human(t.never)
     );
+    print_atime(&report.atime);
     println!();
     for level in [Level::Safe, Level::Review] {
         let items: Vec<_> = report
@@ -228,7 +257,35 @@ fn print_report(report: &Report, explain: bool) {
         println!();
     }
     if explain {
-        let recent: Vec<_> = report.recommendations.iter().filter(|r| r.recent).collect();
+        let caveats: Vec<_> = report
+            .recommendations
+            .iter()
+            .filter(|r| r.atime_caveat.is_some())
+            .collect();
+        if !caveats.is_empty() {
+            println!(
+                "-- access time not trusted ({} items, shown only) --",
+                caveats.len()
+            );
+            for r in &caveats {
+                println!(
+                    "{:>8}  {:<28} {}  [{}]",
+                    human(r.size),
+                    r.rule_id,
+                    r.display,
+                    match r.atime_caveat {
+                        Some(cleanator_core::classify::AtimeCaveat::Noatime) => "noatime",
+                        _ => "mass read",
+                    }
+                );
+            }
+            println!();
+        }
+        let recent: Vec<_> = report
+            .recommendations
+            .iter()
+            .filter(|r| r.recent && r.atime_caveat.is_none())
+            .collect();
         println!(
             "-- recent ({} items classified but used within {} days, not proposed) --",
             recent.len(),
