@@ -7,6 +7,22 @@ titre, ce qui a ete decide, par qui, ce qui a ete ecarte, et la preuve (fichier,
 
 ---
 
+## 2026-10-16, release 0.1.0 publiee
+
+- Alexandre : commit 12, paquets reconstruits, tag `v0.1.0` pousse, release creee sur
+  GitHub avec `.deb`, `.rpm`, AppImage et `SHA256SUMS` (6 fichiers avec les archives
+  sources automatiques), label « None » (Latest).
+- Verifie par Claude depuis le cloud : telechargement anonyme du `.deb`, somme conforme a
+  `SHA256SUMS`, `cleanator-cli 0.1.0` extrait du paquet repond `0 rules still have a
+  source to verify`. Defaut releve : `SHA256SUMS` publie contient une ligne pour lui-meme
+  (le fichier existait deja quand `./*` a ete liste) — sans effet sur la verification des
+  paquets ; `build.sh` corrige (efface puis ne somme que .deb/.rpm/.AppImage). A corriger
+  dans la release 0.1.1, pas la peine de re-televerser.
+- README : statut « 0.1.0, first release », section Install pointe vers la derniere
+  release. Commit 13.
+- Etape 4 close. Etape 5 ouverte : captures en anglais pour le README, verification des
+  outils cites dans « why not », `docs/rules.md` deja a jour.
+
 ## 2026-10-16, depot GitHub en ligne ; preparation de la 0.1.0
 
 - Alexandre a cree `blackberrylabs/cleanator` et pousse les 11 commits (remote en SSH, le

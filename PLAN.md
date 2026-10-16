@@ -129,7 +129,9 @@ testes sur la machine de dev.
       (`git rebase --root --exec 'commit --amend --author'`), dates conservees — 2026-10-16
 - [x] Depot `blackberrylabs/cleanator` cree par Alexandre, 11 commits pousses en SSH sur son
       accord — 2026-10-16 ; verifie en ligne : ni `00_cadrage/` ni `dist/`, MIT detectee
-- [ ] Tag `v0.1.0`, release, note de version
+- [x] Tag `v0.1.0` pousse, release GitHub publiee par Alexandre avec les 4 fichiers de
+      `dist/` (marquee Latest) ; `.deb` retelecharge anonymement et verifie (somme OK,
+      `cleanator-cli 0.1.0`) — 2026-10-16. **Etape 4 close.**
 
 ## Etape 5. README et lancement
 

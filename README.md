@@ -5,8 +5,8 @@ images, package caches, AI assistants' histories: Cleanator shows where the spac
 classifies what can go (`safe` / `review` / `never`), and writes a shell script you read and
 run yourself. **It never deletes anything.**
 
-> Status: **pre-release.** The core and the desktop app work; packages exist but no release
-> is published yet. Everything the tool knows is in [`rules/`](rules/) — 70 declarative rules, each with its
+> Status: **0.1.0, first release** — see [Releases](https://github.com/blackberrylabs/cleanator/releases)
+> and [`CHANGELOG.md`](CHANGELOG.md). Everything the tool knows is in [`rules/`](rules/) — 70 declarative rules, each with its
 > reason, how the item regenerates, what it costs, and the documentation it is based on.
 > Disagree with one? Open an issue quoting its `id`.
 
@@ -50,7 +50,7 @@ same rules, probes and classifier.
 
 ## Install
 
-Packages are built by `packaging/build.sh` and will be attached to GitHub Releases:
+Download the package for your distribution from the [latest release](https://github.com/blackberrylabs/cleanator/releases/latest), then:
 
 ```sh
 sudo apt install ./cleanator_0.1.0-1_amd64.deb        # Debian, Ubuntu
