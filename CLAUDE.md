@@ -15,23 +15,21 @@ lui-meme. L'outil ne supprime jamais rien. 100 % Rust (coeur en crate, CLI, inte
 iced). Open source MIT, anglais (francais en option), publie sous
 `github.com/blackberrylabs`. Detail dans `BRIEF.md`.
 
-## Etat au 2026-10-16
+## Etat au 2026-10-16 (soir)
 
-BRIEF clos (rev. 6 : 100 % Rust / iced). Etapes 0, 1 (70 regles) et 2 (coeur : scanner
-egal a `du` a l'octet pres sur 636 Go, sondeurs, classifieur, script) closes. Etape 3 quasi
-close : application iced reelle (treemap, KPI, recommandations a deux profondeurs, onglets
-Explorateur / Assistants IA / Projets, ecran de chargement, icone, clair/sombre, en/fr),
-validee a l'ecran par Alexandre a chaque capture ; reste sa validation des dernieres
-corrections (commit 9). Deux passes reelles sur sa machine acceptees (57,9 Go surs,
-121,5 Go a verifier). Suite : etape 4, paquets `.deb` / `.rpm` / AppImage, puis 0.1.0 —
-le push et la release attendent son accord explicite. Adresse de commit : noreply GitHub
-d'Alexandre (reglee en config locale, 11 commits reecrits le 2026-10-16). Toutes les regles
-citent une source lue (`observed` pour les deux regles Claude Desktop). Detail et suite :
-`PLAN.md`.
+**0.1.0 publiee.** Les cinq etapes du PLAN sont closes : BRIEF (rev. 6), 70 regles toutes
+sourcees (`observed` pour deux regles Claude Desktop), coeur Rust (scanner = `du` a l'octet
+pres, sondeurs, classifieur, script), CLI, application iced (treemap, trois onglets,
+chargement, en/fr, clair/sombre), paquets `.deb`/`.rpm`/AppImage, depot public
+`github.com/blackberrylabs/cleanator`, release `v0.1.0`, README avec captures,
+CONTRIBUTING, CHANGELOG. Adresse de commit : noreply GitHub d'Alexandre. Le push et toute
+release restent soumis a son accord explicite. La suite (0.1.1) est listee dans
+`JOURNAL.md`, entree « etape 5 close » ; les idees de modules dans `00_moi/IDEES.md`.
 
 Methode de travail : Claude compile et teste dans le cloud, copie les fichiers sur le PC
 (sommes verifiees), prepare `00_cadrage/commit_N_message.txt` ; Alexandre lance la
 commande complete (verrous git a retirer : `find .git -name '*.lock' -delete`).
+`.gitignore` s'edite sur place, jamais recopie depuis le cloud.
 
 ## A lire avant de travailler
 

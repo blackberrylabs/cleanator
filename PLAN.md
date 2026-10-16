@@ -133,7 +133,7 @@ testes sur la machine de dev.
       `dist/` (marquee Latest) ; `.deb` retelecharge anonymement et verifie (somme OK,
       `cleanator-cli 0.1.0`) — 2026-10-16. **Etape 4 close.**
 
-## Etape 5. README et lancement
+## Etape 5. README et lancement (close le 2026-10-16)
 
 Resultat visible attendu : README anglais avec captures, section « why not Baobab / ncdu /
 BleachBit » verifiee, `CONTRIBUTING.md`, `docs/rules.md`.

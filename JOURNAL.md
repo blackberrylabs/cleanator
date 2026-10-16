@@ -7,6 +7,17 @@ titre, ce qui a ete decide, par qui, ce qui a ete ecarte, et la preuve (fichier,
 
 ---
 
+## 2026-10-16, etape 5 close — 0.1.0 complete
+
+- Alexandre a pousse les commits 13 et 14 ; verifie depuis le cloud : `origin/main` =
+  commit 14, README et captures servis (`raw.githubusercontent.com`, 200).
+- Les cinq etapes du PLAN sont closes. Cleanator 0.1.0 est publie, documente, empaquete.
+- Pour la 0.1.1 (a ouvrir dans PLAN.md quand Alexandre le decide) : `SHA256SUMS` propre
+  (script deja corrige), dormance des modeles croisee mtime/atime + avertissement
+  `noatime`, test du `.rpm` sur Fedora, sondeur git sur les projets (commits non pousses
+  dans la vue Projets), detection des doublons (~60 Go chez Alexandre), ecran de
+  chargement a verifier a l'oeil sur un scan long. Pistes de modules dans `00_moi/IDEES.md`.
+
 ## 2026-10-16, README final : captures, comparatif verifie, section Rust
 
 - Alexandre : quatre captures en anglais (« rien a cacher ») ; « on ne devrait pas parler
