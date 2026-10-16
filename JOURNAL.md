@@ -7,6 +7,28 @@ titre, ce qui a ete decide, par qui, ce qui a ete ecarte, et la preuve (fichier,
 
 ---
 
+## 2026-10-16, depot GitHub en ligne ; preparation de la 0.1.0
+
+- Alexandre a cree `blackberrylabs/cleanator` et pousse les 11 commits (remote en SSH, le
+  premier essai HTTPS interrompu avait laisse un remote a remplacer par `set-url`).
+  Verifie en ligne par Claude : 11 commits, MIT detectee, aucun fichier personnel ;
+  les fichiers de pilotage en francais sont publics (decision du BRIEF), signale.
+- Fait par Claude : `CHANGELOG.md` (0.1.0 : ajouts, limites connues) ; note de version
+  prete dans `00_cadrage/release_v0.1.0_notes.md` a coller dans la release GitHub.
+- Commit 12. Reste : reconstruire les paquets (`packaging/build.sh`, le binaire a change
+  depuis le commit 11), tag `v0.1.0` + push du tag + release avec les 4 fichiers de
+  `dist/` — sur accord d'Alexandre.
+
+## 2026-10-16, adresse de commit : noreply GitHub
+
+- Alexandre : « l'adresse no reply de GitHub » → `277202463+Nimeria2026@users.noreply.github.com`
+  (compte personnel GitHub : Nimeria2026 ; « Keep my email addresses private » et « Block
+  command line pushes that expose my email » actives). Reglee en config locale du depot,
+  les 11 commits reecrits avec l'auteur correct, dates et messages conserves ; verifie par
+  `git log` : plus aucune trace de `alexandre@blackberrylabs.dev`.
+- Suite : creation du depot `blackberrylabs/cleanator` par Alexandre sur GitHub (vide),
+  puis push sur son accord explicite.
+
 ## 2026-10-16, .deb installe ; sources des regles toutes lues ; CONTRIBUTING
 
 - Alexandre : « j'ai fait tes commandes, c'est installe. Tu peux continuer. » Capture :

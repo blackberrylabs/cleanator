@@ -125,9 +125,10 @@ testes sur la machine de dev.
       systemd-coredump, Vagrant, Jan, GPT4All, Cline, OpenCode, Python) ; schema `observed`
       pour les deux regles Claude Desktop sans documentation publique ; test
       « zero to-verify » verrouille — 2026-10-16
-- [ ] Adresse de commit a corriger (placeholder `alexandre@blackberrylabs.dev`) — question
-      posee a Alexandre
-- [ ] Depot `blackberrylabs/cleanator` (LICENSE MIT, README minimal) — push sur accord
+- [x] Adresse de commit : noreply GitHub choisie par Alexandre, 11 commits reecrits
+      (`git rebase --root --exec 'commit --amend --author'`), dates conservees — 2026-10-16
+- [x] Depot `blackberrylabs/cleanator` cree par Alexandre, 11 commits pousses en SSH sur son
+      accord — 2026-10-16 ; verifie en ligne : ni `00_cadrage/` ni `dist/`, MIT detectee
 - [ ] Tag `v0.1.0`, release, note de version
 
 ## Etape 5. README et lancement

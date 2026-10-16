@@ -24,9 +24,10 @@ Explorateur / Assistants IA / Projets, ecran de chargement, icone, clair/sombre,
 validee a l'ecran par Alexandre a chaque capture ; reste sa validation des dernieres
 corrections (commit 9). Deux passes reelles sur sa machine acceptees (57,9 Go surs,
 121,5 Go a verifier). Suite : etape 4, paquets `.deb` / `.rpm` / AppImage, puis 0.1.0 —
-le push et la release attendent son accord explicite, et l'adresse de commit (placeholder
-`alexandre@blackberrylabs.dev`) doit etre corrigee avant tout push. 10 regles ont encore
-une source `to-verify`. Detail et suite : `PLAN.md`.
+le push et la release attendent son accord explicite. Adresse de commit : noreply GitHub
+d'Alexandre (reglee en config locale, 11 commits reecrits le 2026-10-16). Toutes les regles
+citent une source lue (`observed` pour les deux regles Claude Desktop). Detail et suite :
+`PLAN.md`.
 
 Methode de travail : Claude compile et teste dans le cloud, copie les fichiers sur le PC
 (sommes verifiees), prepare `00_cadrage/commit_N_message.txt` ; Alexandre lance la
