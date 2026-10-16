@@ -42,6 +42,12 @@ costs* — come from the rules and are **English only**, whatever the interface 
 More languages are welcome as contributions: add `locales/<lang>.json`, have a native
 speaker read it, open a pull request.
 
+## Two front ends, one core
+
+`cleanator` (desktop, iced) is for exploring; `cleanator-cli` is for terminals, SSH
+sessions on a headless GPU box, and scripts. Both ship in the same package and share the
+same rules, probes and classifier.
+
 ## Try the core
 
 ```sh

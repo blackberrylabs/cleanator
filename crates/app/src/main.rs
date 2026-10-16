@@ -415,19 +415,24 @@ impl App {
     }
 
     fn view_legend(&self) -> Element<'_, Message> {
-        let mut r = row![].spacing(14);
-        for cat in LEGEND {
-            let label = self.strings.t(&format!("legend.{cat}"), &[]);
-            r = r.push(
-                row![
-                    swatch(category_color(cat, self.dark), 10),
-                    text(label).size(11).style(text::secondary)
-                ]
-                .spacing(5)
-                .align_y(iced::Alignment::Center),
-            );
+        // Two rows: iced 0.13 has no wrapping row, and nine entries overflow one line.
+        let mut rows = column![].spacing(4);
+        for chunk in LEGEND.chunks(5) {
+            let mut r = row![].spacing(14);
+            for cat in chunk {
+                let label = self.strings.t(&format!("legend.{cat}"), &[]);
+                r = r.push(
+                    row![
+                        swatch(category_color(cat, self.dark), 10),
+                        text(label).size(11).style(text::secondary)
+                    ]
+                    .spacing(5)
+                    .align_y(iced::Alignment::Center),
+                );
+            }
+            rows = rows.push(r);
         }
-        r.into()
+        rows.into()
     }
 
     /// Tiles for the folder shown: its subfolders (top 40, the rest aggregated), the
@@ -631,7 +636,9 @@ impl App {
             && selectable_items
                 .iter()
                 .all(|r| self.selected.contains(&r.id));
-        let name = &items[0].rule_name;
+        let full = &items[0].rule_name;
+        let name = full.split(" (").next().unwrap_or(full).to_string();
+        let name = &name;
         let label = format!(
             "{:>7}  {}",
             human(sum),
@@ -924,6 +931,15 @@ fn color_for(path: &Path, size: u64, report: &Report, dark: bool) -> Color {
     if size > 0 && *total * 3 >= size {
         category_color(cat, dark)
     } else {
-        treemap::lighten(category_color(cat, dark), if dark { -0.18 } else { 0.22 })
+        blend(category_color(cat, dark), neutral(dark), 0.55)
     }
+}
+
+/// `a` mixed with `b`: 0.0 is `a`, 1.0 is `b`.
+fn blend(a: Color, b: Color, t: f32) -> Color {
+    Color::from_rgb(
+        a.r + (b.r - a.r) * t,
+        a.g + (b.g - a.g) * t,
+        a.b + (b.b - a.b) * t,
+    )
 }

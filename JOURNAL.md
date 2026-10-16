@@ -7,6 +7,27 @@ titre, ce qui a ete decide, par qui, ce qui a ete ecarte, et la preuve (fichier,
 
 ---
 
+## 2026-10-16, capture de la direction visuelle ; desktop + CLI ; extensibilite ; nom
+
+- Capture d'Alexandre : couleurs justes (modeles violets, venvs jaunes, .config orange
+  par Claude_backup, Bureau rouge par les builds). Trois defauts corriges par Claude :
+  legende qui debordait (deux rangees), libelle de groupe trop long (nom de regle sans
+  sa parenthese), dossier partiellement classe rendu plus fonce en sombre (desormais
+  melange vers le neutre dans les deux modes). Commit 7.
+- Question d'Alexandre : dualite desktop / CLI ? Reponse : deja le cas (`cleanator` et
+  `cleanator-cli`, meme coeur, meme paquet) ; indispensable pour les machines GPU sans
+  ecran et les scripts ; dit dans le README.
+- Question d'Alexandre : d'autres modules dans le meme logiciel, et alors un autre nom ?
+  Avis de Claude : l'architecture le permet (coeur = bibliotheque, regles et sondeurs =
+  greffons, une vue = un module) ; ligne proposee : tout ce qui repond a « ou est passe
+  mon disque » est un module legitime (doublons, gestionnaire de modeles, vue Docker,
+  projets dormants) ; ce qui repond a une autre question (moniteur CPU/GPU,
+  desinstallation) est un autre outil sous Blackberrylabs, qui est le parapluie prevu
+  pour ca. Le nom Cleanator tient tant que le produit reste l'espace disque du dev IA.
+  Decision d'Alexandre : en attente. Question suivante d'Alexandre : quels modules pour
+  les developpeurs et vibe codeurs avec assistants et agents IA — reponse dans la
+  conversation, a journaliser quand une decision tombe.
+
 ## 2026-10-16, direction visuelle (etape 3)
 
 - Fait par Claude : palette des categories prise de la palette de reference dataviz et
