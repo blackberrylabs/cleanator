@@ -7,6 +7,42 @@ titre, ce qui a ete decide, par qui, ce qui a ete ecarte, et la preuve (fichier,
 
 ---
 
+## 2026-10-16 (nuit), etape 2 : le coeur existe
+
+- Alexandre : « go » pour une nuit de code (PC laisse allume). Decisions prises sans lui,
+  toutes reversibles :
+  - les regles sont **embarquees dans le binaire** (`include_str!`) et `--rules DIR` les
+    remplace : `cleanator-cli` marche sans dossier `rules/` a cote ;
+  - seuil des fichiers gardes individuellement par le scanner : **1 Mio** (pour voir les
+    transcriptions et les shards de modeles sans stocker chaque petit fichier) ;
+  - les sondeurs purement fichiers (Hugging Face, nvm) tournent meme avec `--no-probes` ;
+  - flatpak : sondeur **non implemente** (aucun listing en lecture seule des runtimes
+    inutilises) — la regle reste, elle rapporte « not scanned » ;
+  - `python-venv` est la seule regle `review` nettoyee par `rm` (venv jetable par
+    conception) ; le classifieur envoie quand meme a la corbeille tout `review` d'une regle
+    `rm` (R13), donc en pratique `gio trash` ;
+  - `00_cadrage/` mis **hors git** (`.gitignore`) : inventaire personnel du disque,
+    captures de Luno, sorties — a confirmer ;
+  - courriel de commit place en attendant : `alexandre@blackberrylabs.dev` (config locale
+    du depot, pas de courriel trouve pour Alexandre dans 00_moi). **A corriger avant tout
+    push** : `git config user.email <le bon>` puis `git rebase --root --exec 'git commit --amend --no-edit --reset-author'`.
+- Fait par Claude (compile et teste cote cloud, Rust 1.97 ; copie des sources sur le PC) :
+  espace de travail Cargo, `crates/core` (size, paths, rules, scan, exec, probes, inuse,
+  classify, script), `crates/cli`, `crates/app` (vide). Scanner egal a `du -sx` a l'octet
+  pres sur /usr/lib, /root et un `target/` (0 octet d'ecart). 21 tests, clippy propre.
+  Bout en bout sur un home fictif de 3,3 Go : 13 `safe` (1,2 Go), 11 `review` (1,5 Go),
+  `never` 1,5 Go (VM Claude Desktop, gros fichier inconnu), venv recent non propose,
+  projet actif releve en `review`, doublon HF ancienne disposition vu.
+- Depot git : `git init` + commit 1 (pilotage, regles, docs, README, LICENSE) reussi ;
+  commit 2 (le code) **prepare mais non fait** : le shell de Cowork ne peut pas effacer de
+  fichiers, et git a besoin d'effacer ses verrous (`HEAD.lock`, `maintenance.lock`). Les
+  fichiers sont indexes, le message est dans `00_cadrage/commit_2_message.txt`, la
+  commande du matin est dans `CLAUDE.md` (1).
+- Non fait, impossible d'ici : compiler et lancer sur la vraie machine (pas de Rust dans
+  le shell Cowork, crates.io inaccessible depuis lui). Commandes 1 a 3 de `CLAUDE.md`.
+- Etat : etape 2 faite cote code ; validation sur la vraie machine au matin ; ensuite
+  relecture des recommandations reelles, puis etape 3 (spike iced).
+
 ## 2026-10-15, etape 1 close : 70 regles v0
 
 - Alexandre : relecture d'`assistants.toml`, « je ne vois rien de bizarre, pour moi c'est

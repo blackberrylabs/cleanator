@@ -1,0 +1,21 @@
+[package]
+name = "cleanator-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "Cleanator core: disk scanner, rules engine, classifier and script generator (never deletes anything)"
+
+[dependencies]
+anyhow.workspace = true
+thiserror.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+toml.workspace = true
+globset.workspace = true
+rayon.workspace = true
+chrono.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

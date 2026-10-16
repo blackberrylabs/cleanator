@@ -46,23 +46,37 @@ niveau, pourquoi, regeneration, cout, source (documentation de l'outil, lue et d
       les venvs (disposables par conception) — 0 incoherence
 - [ ] Avant release : sources `to-verify` ci-dessus (bloquant)
 
-## Etape 2. Coeur Rust en ligne de commande (`cleanator-cli`) (a ouvrir sur le « go » d'Alexandre)
+## Etape 2. Coeur Rust en ligne de commande (`cleanator-cli`) (ouverte le 2026-10-16 dans la nuit)
 
 Resultat visible attendu : `cleanator-cli scan ~ --json` sort un arbre dont les totaux
 collent a `du -sh` ; `cleanator-cli recommend` sort les recommandations ;
 `cleanator-cli script` ecrit le script. Aucune interface.
 
-- [ ] Espace de travail Cargo : `crates/core`, `crates/cli`, `crates/app` (vide), `rules/`,
-      `locales/`, `docs/` ; versions figees ; `cargo test` vert sur un coeur vide
-- [ ] Scanner : parcours parallele, blocs alloues, dedoublonnage par inode, pas de symlink,
-      pas de traversee de point de montage
-- [ ] Sondeurs : Ollama, Hugging Face, Docker, uv/pnpm, snap/flatpak, journald, assistants
-- [ ] Chargement des regles, resolution des variables d'environnement (R8)
-- [ ] Classifieur + exclusion de ce qui est en usage (R6)
-- [ ] Generateur de script (R11–R13), deux blocs
-- [ ] Tests : totaux contre `du`, un cas par niveau, un cas « en usage », un cas lien
-      physique
-- [ ] Reprendre d'Eliot ce qui y a deja ete resolu cote Rust (structure du coeur, tests)
+- [x] Espace de travail Cargo : `crates/core`, `crates/cli`, `crates/app` (vide), `rules/`,
+      `locales/`, `docs/` ; versions figees (`Cargo.lock`) ; `cargo test` vert
+- [x] Scanner : parcours parallele (rayon), blocs alloues, dedoublonnage par inode, pas de
+      symlink, pas de traversee de point de montage — **egal a `du -sx` a l'octet pres** sur
+      trois arbres de test (2,5 Go, 1,6 Go, 0,8 Go ; 43 ms pour 2,5 Go)
+- [x] Sondeurs : Docker (`system df -v --format json`, taille *unique*, conteneurs `Created`,
+      montages bind), Ollama (`ollama ls`/`ps`, repli sur les manifestes si le serveur est
+      arrete), Hugging Face (dossiers `models--`/`datasets--`), snap, journald, nvm, git
+      (re-clonable), conda, pnpm, apt autoremove ; flatpak : non implemente (pas de
+      listing en lecture seule)
+- [x] Chargement des regles (embarquees dans le binaire + `--rules DIR`), resolution des
+      variables d'environnement (R8), validation = les regles de `docs/rules.md`
+- [x] Classifieur : path / pattern (glob, marqueur, `requires_sibling`, `exclude_under`,
+      ancre projet) / signature / probe ; dormance (`mtime` ou `atime:bin/python`) ; projet
+      actif → `review` ; en usage : processus, fichiers ouverts (`/proc`), montages Docker
+- [x] Generateur de script (R11–R13) : deux blocs, pourquoi en commentaire, `df` avant/apres
+- [x] Tests : 21 (un cas par niveau, projet actif/dormant, venv recent/dormant, modele hors
+      magasin, en usage signale, lien physique, script par selection) ; `cargo clippy` propre
+- [x] Test de bout en bout sur un home fictif de 3,3 Go : 13 `safe`, 11 `review`, `never`
+      pour la VM Claude Desktop et les gros fichiers inconnus
+- [ ] **Matin** : compiler sur la vraie machine, scanner le vrai disque, comparer a `du`
+      (commandes dans `CLAUDE.md`)
+- [ ] Reprendre d'Eliot ce qui y a deja ete resolu cote Rust (structure, tests) — a lire
+- [ ] Sondeurs sur la vraie machine : Docker (49 Go recuperables attendus), Hugging Face
+      (43 Go), snap (15 revisions) — verifier les chiffres contre `docker system df`
 
 ## Etape 3. Spike iced, puis maquette d'interface
 

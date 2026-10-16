@@ -1,0 +1,15 @@
+[package]
+name = "cleanator"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "Cleanator desktop app (iced) — placeholder until the UI spike (PLAN step 3)"
+
+[[bin]]
+name = "cleanator"
+path = "src/main.rs"
+
+[dependencies]
+cleanator-core = { path = "../core" }
