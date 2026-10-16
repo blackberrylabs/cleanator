@@ -77,9 +77,11 @@ atime-measured `review` rules (since 0.1.1):
   is *unknown*. The item is classified and shown but never proposed, with a note naming the
   mount; the report header says how many items and bytes are concerned. Unknown is not
   proposed (project rule R2).
-- **Mass-read day**: when one day other than today or yesterday holds at least 40 % of the
-  large files' access times (and at least 200 of them), something read most of the disk at
-  once — an indexer, a backup, an antivirus. An item last read that day has a real last use
+- **Mass-read day**: when one day other than today or yesterday *dominates* the large
+  files' access times — at least 25 % of them, at least twice the second-busiest day, and
+  at least 200 files — something read a large part of the disk at once: an indexer, a
+  backup, an antivirus. (Ordinary days hold 5–15 %; a backup day measured on a real home
+  held 35 %, 2.5× the next.) An item last read that day has a real last use
   somewhere between its modification and that day, so it is dormant only once *that day* is
   older than the window. The note says so and gives the date it becomes proposable.
 

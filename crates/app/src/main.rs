@@ -3,6 +3,7 @@
 #![forbid(unsafe_code)]
 
 mod i18n;
+mod settings;
 mod treemap;
 
 use std::collections::{BTreeMap, HashSet};
@@ -24,6 +25,7 @@ use cleanator_core::script::{generate, ScriptOptions, Selection};
 use cleanator_core::size::{human, ymd};
 
 use i18n::{Lang, Strings};
+use settings::Settings;
 use treemap::{Item, Treemap, TreemapEvent};
 
 /// Window icon, embedded so the binary is self-sufficient (the `.desktop` entry uses the
@@ -62,7 +64,7 @@ enum Message {
     CopyScript,
     SaveScript,
     ToggleTheme,
-    ToggleLang,
+    SetLang(Lang),
 }
 
 impl From<TreemapEvent> for Message {
@@ -132,10 +134,11 @@ impl App {
             .nth(1)
             .map(PathBuf::from)
             .unwrap_or_else(|| env.home.clone());
-        let lang = Lang::from_env();
+        let settings = Settings::load();
+        let lang = settings.initial_lang();
         let strings = Strings::load(lang);
         let status = strings.t("status.scanning", &[("path", &root.to_string_lossy())]);
-        let dark = matches!(std::env::var("CLEANATOR_THEME").as_deref(), Ok("dark"));
+        let dark = settings.initial_dark();
         let work = Work::new();
         let task = start_scan(root.clone(), &work);
         let app = App {
@@ -180,7 +183,47 @@ impl App {
         self.strings.t(key, &[])
     }
 
+    /// `EN · FR`, the active language highlighted like a tab. Each label is in its own
+    /// language on purpose: a reader who does not understand the interface can still find
+    /// their own.
+    fn view_lang_picker(&self) -> Element<'_, Message> {
+        let pick = |lang: Lang, label: &'static str| -> Element<'_, Message> {
+            let b = button(text(label).size(11)).padding([2, 7]);
+            if lang == self.lang {
+                b.style(button::primary).into()
+            } else {
+                b.style(button::text)
+                    .on_press(Message::SetLang(lang))
+                    .into()
+            }
+        };
+        row![pick(Lang::En, "EN"), pick(Lang::Fr, "FR")]
+            .spacing(2)
+            .align_y(iced::Alignment::Center)
+            .into()
+    }
+
+    /// Persist language and theme so the next launch starts the same way.
+    fn remember(&self) {
+        Settings {
+            lang: Some(self.lang.code().to_string()),
+            theme: Some(if self.dark { "dark" } else { "light" }.to_string()),
+        }
+        .save();
+    }
+
+    /// The footer line, in the current language, for the current phase.
     fn refresh_status(&mut self) {
+        if matches!(self.phase, Phase::Scanning) {
+            self.status = self
+                .strings
+                .t("status.scanning", &[("path", &self.root.to_string_lossy())]);
+            return;
+        }
+        if let Phase::Failed(e) = &self.phase {
+            self.status = self.strings.t("status.error", &[("error", e)]);
+            return;
+        }
         if let (Some(scan), Some(report)) = (&self.scan, &self.report) {
             self.status = self.strings.t(
                 "status.scanned",
@@ -312,15 +355,17 @@ impl App {
                     self.status = self.t("panel.nothing");
                 }
             }
-            Message::ToggleTheme => self.dark = !self.dark,
-            Message::ToggleLang => {
-                self.lang = if self.lang == Lang::Fr {
-                    Lang::En
-                } else {
-                    Lang::Fr
-                };
-                self.strings = Strings::load(self.lang);
-                self.refresh_status();
+            Message::ToggleTheme => {
+                self.dark = !self.dark;
+                self.remember();
+            }
+            Message::SetLang(lang) => {
+                if lang != self.lang {
+                    self.lang = lang;
+                    self.strings = Strings::load(lang);
+                    self.refresh_status();
+                    self.remember();
+                }
             }
         }
         Task::none()
@@ -361,9 +406,8 @@ impl App {
         let footer = row![
             text(self.status.clone()).size(12).style(text::secondary),
             horizontal_space(),
-            button(text(self.t("lang.toggle")).size(12))
-                .style(button::text)
-                .on_press(Message::ToggleLang),
+            self.view_lang_picker(),
+            Space::with_width(6),
             button(text(self.t("theme.toggle")).size(12))
                 .style(button::text)
                 .on_press(Message::ToggleTheme),
@@ -495,17 +539,23 @@ impl App {
     fn view_header(&self) -> Element<'_, Message> {
         let (scanned, safe, review, in_use, never, n_safe, n_review) = match &self.report {
             Some(r) => (
-                r.scan.total_size,
-                r.totals.safe,
-                r.totals.review,
-                r.totals.in_use,
-                r.totals.never,
+                Some(r.scan.total_size),
+                Some(r.totals.safe),
+                Some(r.totals.review),
+                Some(r.totals.in_use),
+                Some(r.totals.never),
                 r.totals.counts.get("safe").copied().unwrap_or(0),
                 r.totals.counts.get("review").copied().unwrap_or(0),
             ),
-            None => (0, 0, 0, 0, 0, 0, 0),
+            None => (None, None, None, None, None, 0, 0),
         };
-        let items = |n: u64| self.strings.t("kpi.items", &[("n", &n.to_string())]);
+        let items = |n: u64| {
+            if self.report.is_none() {
+                String::new()
+            } else {
+                self.strings.t("kpi.items", &[("n", &n.to_string())])
+            }
+        };
         row![
             self.kpi(
                 &self.t("kpi.scanned"),
@@ -535,7 +585,7 @@ impl App {
     fn kpi<'a>(
         &self,
         label: &str,
-        value: u64,
+        value: Option<u64>,
         sub: &str,
         dot: Option<Color>,
     ) -> Element<'a, Message> {
@@ -552,7 +602,7 @@ impl App {
         card(
             column![
                 head,
-                text(human(value)).size(28),
+                text(value.map(human).unwrap_or_else(|| "—".into())).size(28),
                 text(sub_text).size(11).style(text::secondary),
             ]
             .spacing(2)

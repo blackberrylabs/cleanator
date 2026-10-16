@@ -785,7 +785,7 @@ fn finish(
                     // then, nor of non-use before. Dormant only once that day is old enough.
                     atime_caveat = Some(AtimeCaveat::MassRead);
                     notes.push(format!(
-                        "last read on {}, the day most of this disk was read at once \
+                        "last read on {}, the day a large part of this disk was read at once \
                          ({} of {} large files); real last use unknown — proposed from {} \
                          unless used",
                         crate::size::ymd(mass.day),
@@ -1192,7 +1192,10 @@ mod tests {
             "not proposed until the mass-read day is 60 days old"
         );
         let note = q.notes.as_deref().unwrap();
-        assert!(note.contains("most of this disk was read"), "{note}");
+        assert!(
+            note.contains("a large part of this disk was read"),
+            "{note}"
+        );
         assert!(note.contains(&crate::size::ymd(mass.day + 60 * 86_400)));
         assert_eq!(report.atime.deferred_items, 1);
         assert_eq!(report.atime.deferred_until, Some(mass.day + 60 * 86_400));

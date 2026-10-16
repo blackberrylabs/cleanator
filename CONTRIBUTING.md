@@ -49,8 +49,8 @@ tool created it) and links the documentation you read. One rule per PR is easies
 
 Copy `locales/en.json` to `locales/<lang>.json`, translate the values (keep the `{placeholders}`),
 then in `crates/app/src/i18n.rs` add a variant to `Lang`, an `include_str!` for the file,
-its detection in `Lang::from_env` and its case in `Strings::load`, and extend the two-way
-language toggle in `main.rs` (`Message::ToggleLang`). The test `both_locales_have_the_same_keys` will tell
+its code in `Lang::from_code`/`code`, its detection in `Lang::from_env` and its case in
+`Strings::load`, then a button in the language picker in `main.rs` (`view_lang_picker`). The test `both_locales_have_the_same_keys` will tell
 you if a key is missing. Rule explanations
 (`why`, `regenerate`, `cost`, `notes`) stay English on purpose: they are a single source
 read by every language. Please have a native speaker read your file before opening the PR.

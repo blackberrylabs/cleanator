@@ -194,7 +194,7 @@ fn print_atime(a: &cleanator_core::atime::AtimeReport) {
     if let (Some(m), Some(until)) = (a.mass_read, a.deferred_until) {
         if a.deferred_items > 0 {
             println!(
-                "note: on {} most of this disk was read at once ({} of {} large files — an \
+                "note: on {} a large part of this disk was read at once ({} of {} large files — an \
                  indexer or a backup). {} items ({}) were last read that day; their real \
                  last use is unknown. Proposed from {} unless used.",
                 cleanator_core::size::ymd(m.day),

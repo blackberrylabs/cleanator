@@ -182,8 +182,10 @@ D2. **Sous `noatime`**, pour les regles mesurees en atime : dernier usage = « i
     Variante ecartee par Claude, a confirmer par Alexandre : proposer quand meme en `review`
     avec l'avertissement — plus utile sur les machines `noatime`, mais contraire a R2.
 D3. **Detecter la lecture massive** : apres le scan, compter par jour les atimes des gros
-    fichiers (hors dossiers de build) ; si un jour autre qu'aujourd'hui ou hier porte au
-    moins 40 % d'entre eux et au moins 200 fichiers, c'est une lecture massive. Pour un
+    fichiers (hors dossiers de build) ; si un jour autre qu'aujourd'hui ou hier **domine**
+    (≥ 25 % d'entre eux, ≥ 2 × le deuxieme jour, ≥ 200 fichiers), c'est une lecture
+    massive. [Seuil revu le 2026-10-16 apres mesure reelle : le jour de sauvegarde du
+    2026-10-02 portait 35 %, 2,5 × le suivant ; le 40 % initial le manquait.] Pour un
     element dont l'atime tombe ce jour-la, le vrai dernier usage est quelque part entre sa
     date de modification et ce jour : il n'est dormant que si **ce jour-la** a plus de 60
     jours. L'outil le dit : « last read on 2026-09-02, the day most of this disk was read;
@@ -199,7 +201,9 @@ D5. **Tests** : options de montage et jour de lecture massive injectables dans
 - [x] Code + tests (coeur : module `atime`, 29 tests verts, clippy propre), affichage (app :
       bandeau sous les KPI ; CLI : notes + `--explain`), locales, `docs/rules.md` — commit 15
 - [ ] `SHA256SUMS` propre a la reconstruction (script deja corrige, a constater)
-- [ ] Ecran de chargement vu a l'oeil par Alexandre (`cleanator /`)
+- [x] Ecran de chargement vu par Alexandre sur `/` (664 Go, 3,2 M fichiers) : etape,
+      compteurs, pulsation OK ; KPI « 0B » pendant le scan → « — » ; pied de page recalcule
+      au changement de langue — 2026-10-16
 - [ ] Usage reel par Alexandre : « Select safe », lecture du script, execution, resultat
       consigne (espace libere, incidents eventuels)
 - [ ] CHANGELOG 0.1.1, tag, release (push et release sur accord)

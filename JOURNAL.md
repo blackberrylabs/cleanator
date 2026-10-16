@@ -7,6 +7,26 @@ titre, ce qui a ete decide, par qui, ce qui a ete ecarte, et la preuve (fichier,
 
 ---
 
+## 2026-10-16, mesure reelle des atimes ; seuil relatif ; preferences retenues ; EN·FR
+
+- Alexandre : ecran de chargement vu sur `/` (664,5 Go, 3 249 776 fichiers, 432 473
+  dossiers, 6 s), captures claire et sombre. Pas de bandeau atime → mesure demandee et
+  faite par lui (`find … -printf '%A@'`) : 16 950 gros fichiers ; 2026-10-02 : 5 965
+  (35 %), 2026-10-09 : 2 363, 2026-09-02 : 2 231 (13 %), puis 1 390, 1 077, 949, 587.
+  Lecture : l'hypothese du 2 septembre etait un instantane du 15 octobre ; depuis, une
+  lecture massive le 2 octobre (sauvegarde ou indexeur), que le seuil de 40 % manquait.
+- Decision de Claude (conception D3 amendee, consignee dans PLAN) : critere de
+  **dominance** — ≥ 25 % du total, ≥ 2 × le deuxieme jour, ≥ 200 fichiers. Teste sur la
+  distribution reelle d'Alexandre (detecte le 2 octobre, pas le 2 septembre) et sur trois
+  contre-exemples. Libelles : « une grande partie de ce disque » et non « la majorite ».
+- Alexandre : « lorsque ca se lance, est-ce que ca pourrait etre en anglais de base ? » →
+  l'app retient langue et theme (`~/.config/cleanator/settings.json`, seul fichier ecrit
+  hors script ; `CLEANATOR_LANG` / `CLEANATOR_THEME` priment) ; premier lancement = langue
+  systeme, ensuite le dernier choix. « Mettre EN a cote de FR » → selecteur EN · FR, langue
+  active mise en evidence, chaque libelle dans sa propre langue. Pied de page « Analyse de
+  /… » reste en francais apres bascule → recalcule. KPI « 0B » pendant le scan → « — ».
+- Commit 16. Reste etape 6 : usage reel par Alexandre, CHANGELOG 0.1.1, release.
+
 ## 2026-10-16, dormance robuste codee (D1–D5)
 
 - Alexandre : « je valide et je suis ta recommandation » (D2 strict).

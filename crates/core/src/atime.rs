@@ -120,9 +120,12 @@ pub fn day_of(ts: i64) -> i64 {
     ts.div_euclid(86_400) * 86_400
 }
 
-/// At least this share of the big files, and at least this many, on one day other than
-/// today or yesterday.
-pub const MASS_READ_MIN_SHARE: f64 = 0.40;
+/// A mass read is a day that *dominates*: at least this share of the big files, at least
+/// this many times the second-busiest day, and at least this many files — on a day other
+/// than today or yesterday. (Measured on a real 16 950-file home: a backup day held 35 %,
+/// 2.5× the next day; ordinary days hold 5–15 %.)
+pub const MASS_READ_MIN_SHARE: f64 = 0.25;
+pub const MASS_READ_DOMINANCE: f64 = 2.0;
 pub const MASS_READ_MIN_FILES: usize = 200;
 
 /// Look for a mass-read day among the scan's big files, excluding build directories
@@ -133,16 +136,33 @@ pub fn detect_mass_read(scan: &Scan, now: i64) -> Option<MassRead> {
     collect_atimes(&scan.tree, &mut by_day, &mut total);
     let today = day_of(now);
     let yesterday = today - 86_400;
-    let (day, files) = by_day
-        .iter()
-        .filter(|(d, _)| **d != today && **d != yesterday)
-        .max_by_key(|(_, n)| **n)
-        .map(|(d, n)| (*d, *n))?;
-    if files >= MASS_READ_MIN_FILES && files as f64 >= total as f64 * MASS_READ_MIN_SHARE {
+    let mut days: Vec<(i64, usize)> = by_day
+        .into_iter()
+        .filter(|(d, _)| *d != today && *d != yesterday)
+        .collect();
+    days.sort_by_key(|(_, n)| std::cmp::Reverse(*n));
+    let (day, files) = *days.first()?;
+    let second = days.get(1).map(|(_, n)| *n).unwrap_or(0);
+    if files >= MASS_READ_MIN_FILES
+        && files as f64 >= total as f64 * MASS_READ_MIN_SHARE
+        && files as f64 >= second as f64 * MASS_READ_DOMINANCE
+    {
         Some(MassRead { day, files, total })
     } else {
         None
     }
+}
+
+/// The same decision on a histogram (for tests and for `--explain`).
+pub fn mass_read_from_counts(counts: &[(i64, usize)], total: usize) -> Option<MassRead> {
+    let mut days: Vec<(i64, usize)> = counts.to_vec();
+    days.sort_by_key(|(_, n)| std::cmp::Reverse(*n));
+    let (day, files) = *days.first()?;
+    let second = days.get(1).map(|(_, n)| *n).unwrap_or(0);
+    (files >= MASS_READ_MIN_FILES
+        && files as f64 >= total as f64 * MASS_READ_MIN_SHARE
+        && files as f64 >= second as f64 * MASS_READ_DOMINANCE)
+        .then_some(MassRead { day, files, total })
 }
 
 fn collect_atimes(
@@ -239,6 +259,30 @@ tmpfs /run tmpfs rw,nosuid,nodev,noexec,relatime,size=3270096k 0 0
             Some(Path::new("/mnt/data"))
         );
         assert_eq!(ctx.noatime_mount(Path::new("/home/x")), None);
+    }
+
+    #[test]
+    fn mass_read_is_a_dominating_day() {
+        // Measured on a real home on 2026-10-16: 16 950 large files.
+        let d = |n: i64| day_of(1_790_000_000 + n * 86_400);
+        let real = [
+            (d(0), 5965usize), // 2026-10-02: a backup or an indexer
+            (d(7), 2363),
+            (d(-30), 2231), // 2026-09-02: the earlier suspicion, only 13 %
+            (d(-3), 1390),
+            (d(-2), 1077),
+            (d(-7), 949),
+            (d(13), 587),
+        ];
+        let m = mass_read_from_counts(&real, 16_950).expect("the 35 % day dominates");
+        assert_eq!(m.day, d(0));
+        assert_eq!(m.files, 5965);
+        // Two busy days of similar weight: nobody dominates, no mass read.
+        assert!(mass_read_from_counts(&[(d(0), 5000), (d(1), 4000)], 16_950).is_none());
+        // A dominating day that is still a small share of the disk: no mass read.
+        assert!(mass_read_from_counts(&[(d(0), 1000), (d(1), 300)], 16_950).is_none());
+        // Too few files to mean anything.
+        assert!(mass_read_from_counts(&[(d(0), 150), (d(1), 10)], 200).is_none());
     }
 
     #[test]

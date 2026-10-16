@@ -13,6 +13,25 @@ pub enum Lang {
 }
 
 impl Lang {
+    /// `"en"` / `"fr"` (case-insensitive, a longer locale tag such as `fr_FR.UTF-8` works).
+    pub fn from_code(code: &str) -> Option<Lang> {
+        let c = code.trim().to_ascii_lowercase();
+        if c.starts_with("fr") {
+            Some(Lang::Fr)
+        } else if c.starts_with("en") {
+            Some(Lang::En)
+        } else {
+            None
+        }
+    }
+
+    pub fn code(self) -> &'static str {
+        match self {
+            Lang::En => "en",
+            Lang::Fr => "fr",
+        }
+    }
+
     /// The system language (`LANGUAGE`, `LC_ALL`, `LC_MESSAGES`, `LANG`), French when it
     /// starts with `fr`, English otherwise.
     pub fn from_env() -> Lang {
