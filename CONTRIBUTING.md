@@ -45,6 +45,13 @@ detection kinds and the in-use checks. Then:
 A good pull request for a rule says what it found on your machine (sizes, paths, which
 tool created it) and links the documentation you read. One rule per PR is easiest to review.
 
+## The tower
+
+Cleanator is a module of the [Blackberrylabs](https://github.com/blackberrylabs/blackberrylabs)
+control tower: `cleanator-cli report` sends one finding per rule group, with a severity
+decided by what the group frees (`severity_of` in `crates/core/src/report.rs`); a change
+there is written in the CHANGELOG.
+
 ## Adding a language
 
 Copy `locales/en.json` to `locales/<lang>.json`, translate the values (keep the `{placeholders}`),

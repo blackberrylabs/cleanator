@@ -119,6 +119,13 @@ explanations attached to each recommendation — *why*, *how it regenerates*, *w
 costs* — come from the rules and are **English only**, whatever the interface language.
 More languages are welcome as contributions: see [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
+## Part of Blackberrylabs
+
+Cleanator is a module of the [Blackberrylabs](https://github.com/blackberrylabs) control
+tower, which gathers what Cleanator, MCProster and Permitt find on a machine in one list, most serious
+first. `cleanator-cli report` is what the tower reads; `cleanator --select` is how it opens Cleanator
+at a finding. Each tool stays complete and installable on its own.
+
 ## Layout
 
 - `crates/core` — scanner, rules engine, probes, classifier, script generator (library);

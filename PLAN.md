@@ -220,4 +220,4 @@ D5. **Tests** : options de montage et jour de lecture massive injectables dans
 ## Etape 7. Module de la tour de controle Blackberrylabs (ouverte le 2026-10-16)
 - [x] Interface depuis `bbl-ui` 0.1.0 (commit 20), anglais par defaut comme les autres outils — 2026-10-16
 - [x] `cleanator-cli report`, `--select` dans l'app, mapping des gravites dans le CHANGELOG — 2026-10-16
-- [ ] Release 0.2.0 (numero decide le 2026-10-17 : une fonctionnalite nouvelle) : commit 23, build.sh, push, tag, release
+- [x] Release 0.2.0 publiee (tag v0.2.0, trois paquets + SHA256SUMS), verifiee depuis le cloud : somme OK, `cleanator-cli report` repond bbl-report/1 — 2026-10-17

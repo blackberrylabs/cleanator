@@ -2,7 +2,7 @@
 
 > Author's working notes, in French. Public documentation lives in `README.md` and `docs/`.
 
-Point d'entree pour reprendre le projet sans contexte. Version du 2026-10-15.
+Point d'entree pour reprendre le projet sans contexte. Version du 2026-10-17.
 Regles communes a tous mes projets : `../../Projets/00_moi/CONVENTIONS.md`, `AUTONOMIE.md`.
 Qui je suis : `../../Projets/00_moi/IDENTITE.md`.
 
@@ -14,6 +14,16 @@ Nettoyeur de disque pour le developpeur Linux qui fait de l'IA : treemap par cat
 lui-meme. L'outil ne supprime jamais rien. 100 % Rust (coeur en crate, CLI, interface
 iced). Open source MIT, anglais (francais en option), publie sous
 `github.com/blackberrylabs`. Detail dans `BRIEF.md`.
+
+## Etat au 2026-10-17
+
+**0.2.0 publiee** : module de la tour de controle Blackberrylabs (`cleanator-cli report`,
+`cleanator [chemin] --select <regle[::cle]>`), interface sur `bbl-ui` 0.1.0 (anglais par
+defaut). Un constat par groupe de regle dans le rapport ; gravite par volume libere
+(≥ 1 Gio = a regarder, moins = bon a savoir, `never` = information) — `severity_of` dans
+`crates/core/src/report.rs`, ecrit dans le CHANGELOG. La tour : `Logiciels/Blackberrylabs`,
+marche a suivre d'un module dans son `docs/new-module.md`. Publier le module avant la tour
+quand le contrat bouge.
 
 ## Etat au 2026-10-16 (soir)
 
