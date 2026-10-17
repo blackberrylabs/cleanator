@@ -122,7 +122,7 @@ More languages are welcome as contributions: see [`CONTRIBUTING.md`](CONTRIBUTIN
 ## Part of Blackberrylabs
 
 Cleanator is a module of the [Blackberrylabs](https://github.com/blackberrylabs) control
-tower, which gathers what Cleanator, MCProster and Permitt find on a machine in one list, most serious
+tower, which gathers what Cleanator, MCProster, Permitt and Linstruct find on a machine in one list, most serious
 first. `cleanator-cli report` is what the tower reads; `cleanator --select` is how it opens Cleanator
 at a finding. Each tool stays complete and installable on its own.
 
