@@ -121,11 +121,12 @@ More languages are welcome as contributions: see [`CONTRIBUTING.md`](CONTRIBUTIN
 
 ## Part of Blackberrylabs
 
-Cleanator is a module of the [Blackberrylabs](https://github.com/blackberrylabs) control
-tower, which gathers what Cleanator, MCProster, Permitt and Linstruct find on a machine in one list, most serious
-first. `cleanator-cli report` is what the tower reads; `cleanator --select` is how it opens Cleanator
-at a finding. Each tool stays complete and installable on its own.
-
+Cleanator is a module of the [Blackberrylabs](https://github.com/blackberrylabs) family —
+read-only tools that show what AI coding agents do to your machine. Want only Cleanator?
+It is complete on its own. Want several? The
+[control tower](https://github.com/blackberrylabs/blackberrylabs) gathers what every
+module finds in one list, most serious first: `cleanator-cli report` is what it reads, `cleanator --select`
+is how it opens Cleanator at a finding.
 ## Layout
 
 - `crates/core` — scanner, rules engine, probes, classifier, script generator (library);
