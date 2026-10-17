@@ -147,8 +147,11 @@ pub fn build(classified: &Classified, duration_ms: u64) -> Report {
                 actions.push(Action { kind: ActionKind::OpenFile, label: format!("Open {}", f.display()), target: Some(f.display().to_string()) });
             }
         }
-        if !first.source_url.is_empty() {
+        // A rule's source is a URL most of the time; when it is a sentence, it is a hint.
+        if first.source_url.starts_with("http") {
             actions.push(Action { kind: ActionKind::OpenUrl, label: "Why it is regenerable".into(), target: Some(first.source_url.clone()) });
+        } else if !first.source_url.is_empty() {
+            actions.push(Action { kind: ActionKind::Hint, label: format!("Source: {}", first.source_url), target: None });
         }
         report.findings.push(Finding {
             id: format!("{}/{}", g.level, g.rule_id),

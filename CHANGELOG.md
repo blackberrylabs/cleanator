@@ -26,6 +26,11 @@ versions follow [Semantic Versioning](https://semver.org/).
   its first item; `--select <rule-id::key>` also ticks that one item. The path to scan stays
   the first positional argument.
 
+### Fixed
+
+- In the report, a rule whose source is a sentence rather than a URL is given as a hint,
+  not as a link to open.
+
 ### Changed
 
 - The interface building blocks, palette, preferences and translated strings now come from
