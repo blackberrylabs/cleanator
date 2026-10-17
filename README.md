@@ -7,7 +7,7 @@ run yourself. **It never deletes anything.**
 
 ![Cleanator: treemap of a home directory coloured by rule category, with the recommendations panel](docs/screenshots/explorer-light.png)
 
-> Status: **0.1.1** — see [Releases](https://github.com/blackberrylabs/cleanator/releases)
+> Status: **0.2.0** — see [Releases](https://github.com/blackberrylabs/cleanator/releases)
 > and [`CHANGELOG.md`](CHANGELOG.md). Everything the tool knows is in [`rules/`](rules/) — 70
 > declarative rules, each with its reason, how the item regenerates, what it costs, and the
 > documentation it is based on. Disagree with one? Open an issue quoting its `id`.
@@ -68,9 +68,9 @@ Light and dark themes, English and French, switchable from the footer.
 Download the package for your distribution from the [latest release](https://github.com/blackberrylabs/cleanator/releases/latest), then:
 
 ```sh
-sudo apt install ./cleanator_0.1.1-1_amd64.deb        # Debian, Ubuntu
-sudo dnf install ./cleanator-0.1.1-1.x86_64.rpm       # Fedora
-chmod +x Cleanator-0.1.1-x86_64.AppImage && ./Cleanator-0.1.1-x86_64.AppImage   # any distro
+sudo apt install ./cleanator_0.2.0-1_amd64.deb        # Debian, Ubuntu
+sudo dnf install ./cleanator-0.2.0-1.x86_64.rpm       # Fedora
+chmod +x Cleanator-0.2.0-x86_64.AppImage && ./Cleanator-0.2.0-x86_64.AppImage   # any distro
 ```
 
 Each package ships `cleanator` (desktop) and `cleanator-cli`, the `.desktop` entry and the

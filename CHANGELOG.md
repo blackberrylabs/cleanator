@@ -3,7 +3,9 @@
 All notable changes to Cleanator. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versions follow [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.2.0] — 2026-10-17
+
+Cleanator becomes a module of the Blackberrylabs control tower.
 
 ### Added
 
