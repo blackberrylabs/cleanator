@@ -27,9 +27,9 @@ niveau, pourquoi, regeneration, cout, source (documentation de l'outil, lue et d
       Claude Code (claude-directory), Codex (config-advanced), VS Code (uninstall) — 2026-10-15
 - [x] Lire la documentation : pipx, pytest, vLLM, nvm, npx, JetBrains, LM Studio (CLI),
       Aider, gio, tracker3-reset, Gemini CLI — 2026-10-15 (16 `to-verify` → 10)
-- [ ] Avant release : les 10 regles encore `to-verify` (Claude Desktop ×2 — pas de doc
+- [x] Avant release : les 10 regles encore `to-verify` (Claude Desktop ×2 — pas de doc
       publique, observe ; Cline/Roo/Kilo ; OpenCode ; images de VM ; __pycache__ ;
-      miniatures ; caches navigateurs ; apport/coredump ; apps LLM locales)
+      miniatures ; caches navigateurs ; apport/coredump ; apps LLM locales) — fait a l'etape 4 : aucun `to-verify` dans `rules/`, test dans `crates/core/src/rules.rs` — 2026-10-26
 - [x] Ecrire le schema TOML d'une regle (`docs/rules.md`, anglais)
 - [x] Regles : caches de paquets (10), Docker (6), modeles (8) — 2026-10-15
 - [x] Relecture du format par Alexandre sur package-caches : « ca me suffit » (2026-10-15) ;
@@ -44,7 +44,7 @@ niveau, pourquoi, regeneration, cout, source (documentation de l'outil, lue et d
 - [x] Relecture finale automatique : chaque regle a pourquoi / regeneration / cout ; aucune
       `safe` sans nettoyage, aucune `never` avec nettoyage, aucune `review` en `rm` sauf
       les venvs (disposables par conception) — 0 incoherence
-- [ ] Avant release : sources `to-verify` ci-dessus (bloquant)
+- [x] Avant release : sources `to-verify` ci-dessus (bloquant) — leve (etape 4) — 2026-10-26
 
 ## Etape 2. Coeur Rust en ligne de commande (`cleanator-cli`) (ouverte le 2026-10-16 dans la nuit | close le 2026-10-16)
 
@@ -77,12 +77,12 @@ collent a `du -sh` ; `cleanator-cli recommend` sort les recommandations ;
 - [x] Deux passes reelles ; cinq defauts corriges (un proprietaire par chemin, usage precis,
       dormance des modeles, `skip_in_project`, exclusions) ; liste `review` relue par
       Alexandre : « c'est bon, on continue » (2026-10-16)
-- [ ] Reprendre d'Eliot ce qui y a deja ete resolu cote Rust (structure, tests) — a lire
+- [ ] Reprendre d'Eliot ce qui y a deja ete resolu cote Rust (structure, tests) — a lire — au 2026-10-26 : non fait ; Eliot est hors de la serie, a decider
 - [x] Sondeurs sur la vraie machine : Docker (15,5 Go de cache de build, 18 Go tensorcash,
       3 poa-banc, image <none>), snap (15 revisions), journald, git (3 re-clonables), HF
-- [ ] A reporter en v1.1 : la date d'acces est fragile (un passage le 2026-09-02 a tout
-      remis a zero : sauvegarde ou indexeur) — croiser avec mtime, avertir en `noatime`
-- [ ] A reporter en v1.1 : regrouper les petits elements (595 `safe` dont ~400 `__pycache__`)
+- [x] A reporter en v1.1 : la date d'acces est fragile (un passage le 2026-09-02 a tout
+      remis a zero : sauvegarde ou indexeur) — croiser avec mtime, avertir en `noatime` — traite en 0.1.1 (etape 6, D1 a D5, commit 15) — 2026-10-26
+- [ ] A reporter en v1.1 : regrouper les petits elements (595 `safe` dont ~400 `__pycache__`) — au 2026-10-26 : pas de trace dans le CHANGELOG, a verifier avant de le declarer fait
 
 ## Etape 3. Spike iced, puis maquette d'interface (ouverte le 2026-10-16)
 

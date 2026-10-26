@@ -7,6 +7,15 @@ titre, ce qui a ete decide, par qui, ce qui a ete ecarte, et la preuve (fichier,
 
 ---
 
+## 2026-10-26, passation à OpenCode
+
+- `AGENTS.md` ajouté : source unique des règles pour OpenCode et tout autre agent. OpenCode ne charge pas `CLAUDE.md` quand `AGENTS.md` existe (documentation d'OpenCode lue le 2026-10-26). `CLAUDE.md` devient un pointeur (`@AGENTS.md`) avec deux lignes propres à Claude. Le bloc commun d'`AGENTS.md` est identique dans les douze dépôts de la série.
+- `opencode.json` ajouté : tout ce qui pousse, tague, supprime, installe ou touche une minuterie demande confirmation ; les fichiers `.env` sont refusés ; `BRIEF.md` et `LICENSE` demandent confirmation à l'édition.
+- PLAN : quatre cases cochées avec preuve (les 10 règles `to-verify` levées, test dans `rules.rs`, dormance traitée en 0.1.1). Les commandes 1 à 3 de l'ancien `CLAUDE.md` (commit 2 et première recommandation du 2026-10-16, avec `git add -A` et un fichier de message de 0.1.0) étaient périmées : elles ne sont pas reprises dans `AGENTS.md`, qui garde les commandes valables.
+- Preuve : état de la série daté du 2026-10-26 dans `Logiciels/PASSATION.md`. Demandé par Alexandre le 2026-10-26.
+
+---
+
 ## 2026-10-16, tard — module de la tour de controle Blackberrylabs
 
 - La tour Blackberrylabs est cadree et son contrat publie (`bbl-report` 0.1.0). Cleanator
